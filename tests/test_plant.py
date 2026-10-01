@@ -121,3 +121,55 @@ class THold(unittest.TestCase):
         p = Plant(st, ["A"], 10, layout=lay, m_per_px=0.5, speed_kmh=6, handling_min=6)
         metres = (300 + 100) * 0.5            # centre to centre, Manhattan
         self.assertAlmostEqual(p.stages[1].hours, (metres / 100 + 6) / 60, places=9)   # 6 km/h = 100 m/min
+
+
+class TBuffers(unittest.TestCase):
+    def line(self, buf):
+        from plantsim.model import Plant, Stage
+        return Plant([Stage("fast", "process", hours=1, cv=0), Stage("slow", "process", hours=4, cv=0, buffer=buf), Stage("out", "process", hours=1, cv=0)],
+                     ["A"], release_every=2, horizon=2000, warmup=200)
+
+    def test_blocking_slows_the_fast_stage_and_keeps_throughput(self):
+        from plantsim.model import simulate
+        r = simulate(self.line(1))
+        self.assertAlmostEqual(r.throughput_per_week, 168 / 4, delta=0.6)      # slow stage sets the pace
+        self.assertGreater(r.stats[0].blocked, 0)                                 # the fast stage waits holding lots
+        self.assertLessEqual(r.stats[1].max_queue, 1)                             # the buffer limit is respected
+        self.assertEqual(r.stats[2].blocked, 0)
+
+    def test_unlimited_buffer_never_blocks_but_queue_grows(self):
+        from plantsim.model import simulate_des
+        p = self.line(10 ** 9)
+        r = simulate_des(p)
+        self.assertEqual(sum(s.blocked for s in r.stats), 0)
+        self.assertGreater(r.stats[1].max_queue, 50)
+
+    def test_event_engine_equals_fifo_engine_when_nothing_blocks(self):
+        import json, os
+        from plantsim.model import simulate_des, simulate_fifo
+        from plantsim.cli import load
+        path = os.path.join(os.path.dirname(__file__), "..", "examples", "pharma_flow.json")
+        for variant in (0, 1):
+            plant = load(path)
+            for s in plant.stages:
+                s.cv = 0.0; s.breakdown_p = 0.0; s.retest_p = 0.0
+                if s.kind == "hold": s.p = 0.0
+                s.buffer = None
+            a = simulate_fifo(plant)
+            for s in plant.stages:
+                if s.kind in ("process", "move"): s.buffer = 10 ** 9
+            b = simulate_des(plant)
+            da = sorted((x.id, round(x.done, 6)) for x in a.batches if x.done is not None)
+            db = sorted((x.id, round(x.done, 6)) for x in b.batches if x.done is not None)
+            self.assertEqual(da, db)
+            self.assertEqual(len(da), len(db))
+            break
+
+    def test_lots_are_conserved_with_blocking(self):
+        from plantsim.model import simulate
+        r = simulate(self.line(0))
+        ids = [b.id for b in r.batches if b.done is not None]
+        self.assertEqual(len(ids), len(set(ids)))
+        for b in r.batches:
+            if b.done is not None:
+                self.assertGreaterEqual(b.done - b.released, 6 - 1e-9)        # never faster than the three process times

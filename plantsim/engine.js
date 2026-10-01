@@ -8,7 +8,7 @@ function nextOpen(t,s){if(!s.window&&(s.workdays==null||s.workdays>=7))return t;
 function nextWave(t,w){const day=Math.floor(t/24),ws=[...w].sort((a,b)=>a-b);for(let d=day;d<day+8;d++)for(const x of ws)if(d*24+x>=t)return d*24+x;return t}
 function resolveMoves(P){if(!(P.layout&&P.m_per_px>0))return;const pos={};P.layout.forEach(l=>pos[l.id]=[l.x+l.w/2,l.y+l.h/2]);
   P.stages.forEach((s,i)=>{if(s.kind==="move"){const a=pos[P.stages[i-1].loc],b=pos[P.stages[i+1].loc],m=(Math.abs(a[0]-b[0])+Math.abs(a[1]-b[1]))*P.m_per_px;s.hours=(m/((P.speed_kmh||6)*1000/60)+(P.handling_min==null?6:P.handling_min))/60}})}
-function simulate(P){resolveMoves(P);
+function simulate(P){resolveMoves(P);if(P.stages.some(x=>x.buffer!=null))return simulateDES(P);
   const rng=makeRng(P.seed||1),S=P.stages,n=S.length,keys=S.map((s,k)=>s.pool||String(k));
   const free={},last={};keys.forEach((key,k)=>{if(!free[key]){free[key]=Array(S[k].servers||1).fill(0);last[key]=Array(S[k].servers||1).fill(null)}});
   const st=S.map(s=>({busy:0,setup:0,repair:0,wait:0,n:0}));const w0=P.warmup,w1=P.horizon;
@@ -37,13 +37,61 @@ function simulate(P){resolveMoves(P);
       end=cur;f[j]=end}
     b.t.push([k,at,ps,end]);if(at>=w0&&at<w1){st[k].wait+=wait;st[k].n++}
     if(k+1<n)push([end,i,k+1]);else b.d=end}
-  const win=w1-w0,fin=batches.filter(b=>b.d!==null&&b.d>=w0&&b.d<=w1),done=fin.filter(b=>!b.rej),rejected=fin.length-done.length;
-  const util=S.map((s,k)=>{const cap=(s.servers||1)*win;return{process:st[k].busy/cap,setup:st[k].setup/cap,repair:st[k].repair/cap}});
+  return finish(P,st,batches)}
+function finish(P,stats,batches){
+  const w0=P.warmup,w1=P.horizon,S=P.stages,st=stats,win=w1-w0,fin=batches.filter(b=>b.d!==null&&b.d>=w0&&b.d<=w1),done=fin.filter(b=>!b.rej),rejected=fin.length-done.length;
+  const util=S.map((s,k)=>{const cap=(s.servers||1)*win;return{process:st[k].busy/cap,setup:st[k].setup/cap,repair:st[k].repair/cap,blocked:(st[k].blocked||0)/cap}});
   const pools={};S.forEach((s,k)=>{if(s.pool){pools[s.pool]=pools[s.pool]||{n:s.servers,busy:0};pools[s.pool].busy+=st[k].busy+st[k].repair}});
   for(const p in pools)pools[p]=pools[p].busy/(pools[p].n*win);
   let bn=-1,bname="";S.forEach((s,k)=>{if(s.kind==="move"||s.kind==="hold")return;const u=util[k],tot=u.process+u.setup+u.repair;if(tot>bn){bn=tot;bname=s.name}});
   return{batches,stats:st,util,pools,throughput:done.length/(win/168),leadDays:done.length?done.reduce((a,b)=>a+b.d-b.r,0)/done.length/24:0,bottleneck:bname,rejected,window:win}}
-if(typeof module!=="undefined")module.exports={simulate,makeRng,nextOpen,nextWave};
+
+// ---- event-driven engine with finite buffers and blocking-after-service (mirror of model.simulate_des) -----------
+function simulateDES(P){
+  const rng=makeRng(P.seed||1),S=P.stages,n=S.length,keys=S.map((s,k)=>s.pool||String(k)),w0=P.warmup,w1=P.horizon;
+  const units={};keys.forEach((key,k)=>{if((S[k].kind==="process"||S[k].kind==="move")&&!units[key])units[key]=Array.from({length:S[k].servers||1},()=>({state:"idle",last:null,free_at:0}))});
+  const st=S.map(()=>({busy:0,setup:0,repair:0,wait:0,n:0,blocked:0,maxq:0}));
+  const batches=[],queue=S.map(()=>[]),blocked=S.map(()=>[]),cur={},heap=[];let sq=0;
+  const less=(a,b)=>a[0]<b[0]||(a[0]===b[0]&&a[1]<b[1]);
+  const push=(t,kind,...a)=>{heap.push([t,++sq,kind,a]);let i=heap.length-1;while(i>0){const q=(i-1)>>1;if(less(heap[i],heap[q])){[heap[i],heap[q]]=[heap[q],heap[i]];i=q}else break}};
+  const pop=()=>{const top=heap[0],l=heap.pop();if(heap.length){heap[0]=l;let i=0;for(;;){let a=2*i+1,b=a+1,m=i;if(a<heap.length&&less(heap[a],heap[m]))m=a;if(b<heap.length&&less(heap[b],heap[m]))m=b;if(m===i)break;[heap[i],heap[m]]=[heap[m],heap[i]];i=m}}return top};
+  const credit=(kind,k,a,b)=>{a=Math.max(a,w0);b=Math.min(b,w1);if(b>a)st[k][kind]+=b-a};
+  const cv=s=>s.cv==null?0.1:s.cv;
+  let t=0,id=0;while(t<P.horizon){batches.push({id,p:P.products[id%P.products.length],r:t,d:null,t:[]});push(t,"release",id);id++;t+=P.release_every}
+  const hasRoom=(k,now)=>{const s=S[k];if(s.buffer==null||(s.kind!=="process"&&s.kind!=="move"))return true;if(queue[k].length<s.buffer)return true;
+    return queue[k].length===0&&units[keys[k]].some(u=>u.state==="idle")&&nextOpen(now,s)<=now};
+  function enter(i,k,now){const b=batches[i],s=S[k],rec=[k,now,now,now,now];b.t.push(rec);cur[i]=rec;
+    if(s.kind==="process"||s.kind==="move"){queue[k].push([now,i]);st[k].maxq=Math.max(st[k].maxq,queue[k].length);dispatch(keys[k],now);return}
+    if(s.kind==="hold"){if(rng.u()>=(s.p==null?1:s.p)){push(now,"leave",i,k,null);return}
+      const start=nextOpen(now,s),end=start+rng.gamma(s.hours,cv(s));if(rng.u()<(s.reject_p||0))b.rej=true;rec[2]=start;rec[3]=end;
+      if(now>=w0&&now<w1){st[k].wait+=start-now;st[k].n++;credit("busy",k,start,end)}push(end,"leave",i,k,null);return}
+    let end;if(s.kind==="wave")end=nextWave(now,s.waves);else end=now+rng.gamma(s.hours,cv(s));rec[3]=end;
+    if(now>=w0&&now<w1){if(s.kind==="wave")st[k].wait+=end-now;st[k].n++}push(end,"leave",i,k,null)}
+  function dispatch(key,now){const us=units[key],ks=[];for(let k=0;k<n;k++)if(keys[k]===key&&(S[k].kind==="process"||S[k].kind==="move"))ks.push(k);
+    for(;;){const idle=us.filter(u=>u.state==="idle");if(!idle.length)return;let best=null,retry=null;
+      for(const k of ks){if(queue[k].length){const op=nextOpen(now,S[k]);if(op<=now){const c=[queue[k][0][0],k];if(!best||c[0]<best[0]||(c[0]===best[0]&&c[1]<best[1]))best=c}else retry=retry===null?op:Math.min(retry,op)}}
+      if(!best){if(retry!==null)push(retry,"open",key);return}
+      const k=best[1],[,i]=queue[k].shift();let u=idle[0];for(const x of idle)if(x.free_at<u.free_at)u=x;
+      const b=batches[i],s=S[k],rec=cur[i],wait=now-rec[1];let c=now;
+      if(u.last!==null&&u.last!==b.p&&(s.changeover||0)>0){credit("setup",k,c,c+s.changeover);c+=s.changeover}
+      u.last=b.p;rec[2]=c;let dur=rng.gamma(s.hours,cv(s));
+      for(;;){credit("busy",k,c,c+dur);c+=dur;if(s.breakdown_p&&rng.u()<s.breakdown_p){const r=rng.gamma(s.repair,0.5);credit("repair",k,c,c+r);c+=r}
+        if(s.retest_p&&rng.u()<s.retest_p){dur=rng.gamma(s.hours,cv(s));continue}break}
+      rec[3]=rec[4]=c;if(rec[1]>=w0&&rec[1]<w1){st[k].wait+=wait;st[k].n++}
+      u.state="busy";push(c,"done",i,k,u);releaseBlocked(k,now)}}
+  function releaseBlocked(k,now){while(blocked[k].length&&hasRoom(k,now)){const[since,i,u,frm]=blocked[k].shift();
+      if(u){credit("blocked",frm,since,now);u.state="idle";u.free_at=now}cur[i][4]=now;enter(i,k,now);if(u)dispatch(keys[frm],now)}}
+  function advance(i,k,u,now){const b=batches[i];
+    if(b.rej||k+1>=n){b.d=now;cur[i][4]=now;if(u){u.state="idle";u.free_at=now;dispatch(keys[k],now)}return}
+    if(hasRoom(k+1,now)&&!blocked[k+1].length){cur[i][4]=now;if(u){u.state="idle";u.free_at=now}enter(i,k+1,now);if(u)dispatch(keys[k],now)}
+    else{blocked[k+1].push([now,i,u,k]);if(u)u.state="blocked"}}
+  while(heap.length){const[now,,kind,a]=pop();
+    if(kind==="release"){const i=a[0];if(hasRoom(0,now)&&!blocked[0].length)enter(i,0,now);else{cur[i]=[0,now,now,now,now];blocked[0].push([now,i,null,-1])}}
+    else if(kind==="done"||kind==="leave")advance(a[0],a[1],a[2],now);
+    else if(kind==="open")dispatch(a[0],now);
+    for(let k=0;k<n;k++)if(blocked[k].length)releaseBlocked(k,now)}
+  return finish(P,st,batches)}
+if(typeof module!=="undefined")module.exports={simulate,simulateDES,makeRng,nextOpen,nextWave};
 
 // ---- signal / transaction layer: derives PLC, WMS, ERP and QA events from the simulated trace -------------
 // Texts come from the stage "events" in the config. "SAP-style" events use only generic, publicly documented concepts

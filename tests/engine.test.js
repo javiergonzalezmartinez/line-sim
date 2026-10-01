@@ -43,3 +43,25 @@ test('more compression capacity does not hurt throughput', () => {
   const a = simulate(p).throughput; p.stages.find(s => s.name === 'Coating').servers = 2;
   assert.ok(simulate(p).throughput >= a - 0.2);
 });
+
+const cfgB = () => JSON.parse(fs.readFileSync(path.join(__dirname, '../examples/pharma_buffers.json'), 'utf8'));
+test('finite buffers, no randomness: JS and Python give identical times and blocked hours', () => {
+  const p = cfgB(); p.seed = 1; p.stages.forEach(s => { s.cv = 0; s.breakdown_p = 0; s.retest_p = 0; if (s.kind === 'hold') s.p = 0; });
+  const j = simulate(p), z = ref.bufzero[0];
+  z.done.forEach((d, i) => assert.ok(Math.abs(j.batches[i].d - d) < 1e-9, `batch ${i}: ${j.batches[i].d} vs ${d}`));
+  assert.ok(Math.abs(j.throughput - z.tp) < 1e-9); assert.ok(Math.abs(j.leadDays - z.lt) < 1e-9);
+  z.blocked.forEach((b, k) => assert.ok(Math.abs(j.stats[k].blocked - b) < 1e-6, `blocked ${k}: ${j.stats[k].blocked} vs ${b}`));
+  z.maxq.forEach((m, k) => assert.strictEqual(j.stats[k].maxq, m));
+  assert.ok(z.blocked.some(b => b > 0), 'the example must actually block');
+});
+test('finite buffers with randomness: means over 20 seeds agree within 3%', () => {
+  let tp = 0, lt = 0;
+  for (let s = 1; s <= 20; s++) { const p = cfgB(); p.seed = s; const j = simulate(p); tp += j.throughput; lt += j.leadDays; }
+  const rtp = ref.bufstat.reduce((a, x) => a + x.tp, 0), rlt = ref.bufstat.reduce((a, x) => a + x.lt, 0);
+  assert.ok(Math.abs(tp / rtp - 1) < 0.03, `throughput ${tp / 20} vs ${rtp / 20}`);
+  assert.ok(Math.abs(lt / rlt - 1) < 0.03, `lead time ${lt / 20} vs ${rlt / 20}`);
+});
+test('buffer limits are respected', () => {
+  const p = cfgB(); const j = simulate(p);
+  p.stages.forEach((s, k) => { if (s.buffer != null) assert.ok(j.stats[k].maxq <= s.buffer, `${s.name}: ${j.stats[k].maxq} > ${s.buffer}`); });
+});

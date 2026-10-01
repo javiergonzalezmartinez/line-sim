@@ -4,7 +4,7 @@ Generic public process knowledge only. Time is in hours from Monday 00:00.
 Each batch visits the stages in order. A stage has N parallel resources. A resource can have a
 working calendar (days/hours), changeover+cleaning time when the product changes, a chance of a
 breakdown per batch, and a QC-style retest chance. There are NO finite buffers between stages
-(batches wait in unlimited queues) and no shift handovers or material shortages.
+(batches wait in unlimited queues unless a stage declares `buffer`, which switches to the event-driven engine with blocking) and no shift handovers or material shortages.
 """
 from __future__ import annotations
 
@@ -32,6 +32,7 @@ class Stage:
     pool: Optional[str] = None      # shared resource pool (e.g. forklifts); stages with the same pool share servers
     p: float = 1.0                  # kind "hold": probability that a lot is held (e.g. a deviation investigation)
     reject_p: float = 0.0           # kind "hold": probability that a held lot is rejected (leaves the plant)
+    buffer: Optional[int] = None    # max lots waiting in front of a process/move stage (None = unlimited). With a limit, a finished lot stays in its resource (blocked) until there is room
     events: Optional[list] = None   # signal/transaction templates for the event layer (used by the browser view)
 
 
@@ -56,6 +57,8 @@ class Plant:
         for s in self.stages:
             if s.servers < 1:
                 raise ValueError(f"{s.name}: servers must be >= 1")
+            if s.buffer is not None and (s.buffer < 0 or s.kind not in ("process", "move")):
+                raise ValueError(f"{s.name}: buffer must be >= 0 and only applies to process/move stages")
             if s.kind not in ("process", "move", "wait", "wave", "hold"):
                 raise ValueError(f"{s.name}: unknown kind {s.kind}")
             if s.kind == "wave" and not s.waves:
@@ -107,6 +110,8 @@ class StageStat:
     wait: float = 0.0
     batches: int = 0
     max_queue_wait: float = 0.0
+    blocked: float = 0.0           # resource-hours spent holding a finished lot because the next stage's buffer was full
+    max_queue: int = 0             # largest number of lots waiting in front of the stage (event-driven engine only)
 
 
 @dataclass
@@ -198,6 +203,12 @@ def _next_wave(t: float, waves: List[float]) -> float:
 
 
 def simulate(plant: Plant) -> Result:
+    if any(s.buffer is not None for s in plant.stages):
+        return simulate_des(plant)
+    return simulate_fifo(plant)
+
+
+def simulate_fifo(plant: Plant) -> Result:
     rng = random.Random(plant.seed)
     keys = [s.pool or k for k, s in enumerate(plant.stages)]
     free = {key: [0.0] * plant.stages[keys.index(key)].servers for key in keys}
@@ -292,4 +303,203 @@ def simulate(plant: Plant) -> Result:
             heapq.heappush(heap, (end, i, k + 1))
         else:
             b.done = end
+    return Result(batches, stats, w1 - w0, w1)
+
+
+def simulate_des(plant: Plant) -> Result:
+    """Event-driven engine with finite buffers and blocking-after-service.
+
+    `buffer` on a process/move stage = how many lots may wait in front of it (lots in service do not count).
+    When the next stage is full, a finished lot stays in its resource (the resource is blocked) until a slot opens;
+    blocked lots are released first-come first-served. Delay-only stages (wait, wave, hold) have no capacity.
+    Same stage semantics as simulate_fifo (calendars, changeovers, breakdowns, retests, holds, shared pools)."""
+    rng = random.Random(plant.seed)
+    S, n = plant.stages, len(plant.stages)
+    keys = [s.pool or str(k) for k, s in enumerate(S)]
+    units: Dict[str, list] = {}
+    for k, key in enumerate(keys):
+        if S[k].kind in ("process", "move") and key not in units:
+            units[key] = [{"state": "idle", "last": None, "batch": None, "free_at": 0.0, "k": None} for _ in range(S[k].servers)]
+    stats = [StageStat(s.name, s.servers) for s in S]
+    w0, w1 = plant.warmup, plant.horizon
+    batches: List[Batch] = []
+    queue = [[] for _ in S]            # (enqueue time, batch id)
+    blocked = [[] for _ in S]          # lots waiting to enter stage k: (since, batch id, unit or None, from stage or -1)
+    heap: list = []
+    seq = [0]
+    cur_trace: Dict[int, list] = {}    # batch id -> open trace record [k, arrive, start, end, leave]
+
+    def push(t, kind, *a):
+        seq[0] += 1
+        heapq.heappush(heap, (t, seq[0], kind, a))
+
+    def credit(kind, k, a, b):
+        a, b = max(a, w0), min(b, w1)
+        if b > a:
+            setattr(stats[k], kind, getattr(stats[k], kind) + (b - a))
+
+    t, bid = 0.0, 0
+    while t < plant.horizon:
+        batches.append(Batch(bid, plant.products[bid % len(plant.products)], t))
+        push(t, "release", bid)
+        bid += 1
+        t += plant.release_every
+
+    def has_room(k, now):
+        s = S[k]
+        if s.buffer is None or s.kind not in ("process", "move"):
+            return True
+        if len(queue[k]) < s.buffer:
+            return True
+        return not queue[k] and any(u["state"] == "idle" for u in units[keys[k]]) and _next_open(now, s) <= now
+
+    def enter(i, k, now):
+        """Lot i arrives at stage k at `now` (room already checked)."""
+        b, s = batches[i], S[k]
+        rec = [k, now, now, now, now]
+        b.trace.append(rec)
+        cur_trace[i] = rec
+        if s.kind in ("process", "move"):
+            queue[k].append((now, i))
+            stats[k].max_queue = max(stats[k].max_queue, len(queue[k]))
+            dispatch(keys[k], now)
+            return
+        if s.kind == "hold":
+            if rng.random() >= s.p:
+                rec[2] = rec[3] = now
+                push(now, "leave", i, k, None)
+                return
+            start = _next_open(now, s)
+            end = start + _gamma(rng, s.hours, s.cv)
+            if rng.random() < s.reject_p:
+                b.rejected = True
+            b.waits[s.name] = start - now
+            rec[2], rec[3] = start, end
+            if w0 <= now < w1:
+                stats[k].wait += start - now
+                stats[k].batches += 1
+                stats[k].max_queue_wait = max(stats[k].max_queue_wait, start - now)
+                credit("busy", k, start, end)
+            push(end, "leave", i, k, None)
+            return
+        if s.kind == "wave":
+            end = _next_wave(now, s.waves)
+            b.waits[s.name] = end - now
+            rec[3] = end
+        else:
+            end = now + _gamma(rng, s.hours, s.cv)
+            b.waits[s.name] = 0.0
+            rec[3] = end
+        if w0 <= now < w1:
+            stats[k].wait += end - now if s.kind == "wave" else 0.0
+            stats[k].batches += 1
+        push(end, "leave", i, k, None)
+
+    def dispatch(key, now):
+        us = units[key]
+        ks = [k for k in range(n) if keys[k] == key and S[k].kind in ("process", "move")]
+        while True:
+            idle = [u for u in us if u["state"] == "idle"]
+            if not idle:
+                return
+            cand, retry = [], None
+            for k in ks:
+                if queue[k]:
+                    op = _next_open(now, S[k])
+                    if op <= now:
+                        cand.append((queue[k][0][0], k))
+                    else:
+                        retry = op if retry is None else min(retry, op)
+            if not cand:
+                if retry is not None:
+                    push(retry, "open", key)
+                return
+            _, k = min(cand)
+            _, i = queue[k].pop(0)
+            u = min(idle, key=lambda x: x["free_at"])        # the resource idle the longest (same choice as the FIFO engine)
+            b, s = batches[i], S[k]
+            rec = cur_trace[i]
+            start = now
+            wait = start - rec[1]
+            cur = start
+            if u["last"] is not None and u["last"] != b.product and s.changeover > 0:
+                credit("setup", k, cur, cur + s.changeover)
+                cur += s.changeover
+            u["last"] = b.product
+            rec[2] = cur
+            dur = _gamma(rng, s.hours, s.cv)
+            while True:
+                credit("busy", k, cur, cur + dur)
+                cur += dur
+                if s.breakdown_p and rng.random() < s.breakdown_p:
+                    r = _gamma(rng, s.repair, 0.5)
+                    credit("repair", k, cur, cur + r)
+                    cur += r
+                if s.retest_p and rng.random() < s.retest_p:
+                    dur = _gamma(rng, s.hours, s.cv)
+                    continue
+                break
+            rec[3] = rec[4] = cur
+            b.waits[s.name] = wait
+            if w0 <= rec[1] < w1:
+                stats[k].wait += wait
+                stats[k].batches += 1
+                stats[k].max_queue_wait = max(stats[k].max_queue_wait, wait)
+            u["state"], u["batch"], u["k"] = "busy", i, k
+            push(cur, "done", i, k, u)
+            release_blocked(k, now)
+
+    def release_blocked(k, now):
+        """A slot in front of stage k may have opened: let waiting lots in, oldest first."""
+        while blocked[k] and has_room(k, now):
+            since, i, u, frm = blocked[k].pop(0)
+            if u is not None:
+                credit("blocked", frm, since, now)
+                u["state"], u["batch"], u["free_at"] = "idle", None, now
+            cur_trace[i][4] = now
+            enter(i, k, now)
+            if u is not None:
+                dispatch(keys[frm], now)
+
+    def advance(i, k, u, now):
+        """Lot i has finished stage k (service or delay) at `now` and wants to go to k+1."""
+        b = batches[i]
+        if b.rejected or k + 1 >= n:
+            b.done = now
+            cur_trace[i][4] = now
+            if u is not None:
+                u["state"], u["batch"], u["free_at"] = "idle", None, now
+                dispatch(keys[k], now)
+            return
+        if has_room(k + 1, now) and not blocked[k + 1]:
+            cur_trace[i][4] = now
+            if u is not None:
+                u["state"], u["batch"], u["free_at"] = "idle", None, now
+            enter(i, k + 1, now)
+            if u is not None:
+                dispatch(keys[k], now)
+        else:
+            blocked[k + 1].append((now, i, u, k))
+            if u is not None:
+                u["state"] = "blocked"
+
+    while heap:
+        now, _, kind, a = heapq.heappop(heap)
+        if kind == "release":
+            i = a[0]
+            if has_room(0, now) and not blocked[0]:
+                enter(i, 0, now)
+            else:
+                cur_trace[i] = [0, now, now, now, now]
+                blocked[0].append((now, i, None, -1))
+        elif kind == "done":
+            advance(a[0], a[1], a[2], now)
+        elif kind == "leave":
+            advance(a[0], a[1], a[2], now)
+        elif kind == "open":
+            dispatch(a[0], now)
+        # a freed queue slot or unit may let blocked lots in
+        for k in range(n):
+            if blocked[k]:
+                release_blocked(k, now)
     return Result(batches, stats, w1 - w0, w1)

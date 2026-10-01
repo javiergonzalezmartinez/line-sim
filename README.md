@@ -39,3 +39,13 @@ Document numbers are simulated sequence numbers. No SAP field names or transacti
 - **MQTT-style message view**: each signal can be shown as a topic and JSON payload (`fictitious-plant/<area>/<device>`, invented naming), exportable as JSON lines. No broker or real protocol is involved.
 - **Palletizer detail**: pattern (5 layers x 12 cases), robot pick and place per layer, pallet complete with case count.
 Still not modelled: finite buffers and blocking between stages, shift handovers, material shortages, AGV traffic, real OPC UA/MQTT/IDoc interfaces.
+
+## Milestone 6: finite buffers and blocking (illustrative)
+
+A process or move stage can have `buffer`: the maximum number of lots waiting in front of it (absent = unlimited). When any stage has a buffer, an event-driven engine runs (`simulate_des` in Python, `simulateDES` in `plantsim/engine.js`). Without buffers the old engine runs unchanged.
+
+- Semantics: block-after-service. A finished lot stays on its resource (machine or forklift with the pallet) until the next stage has room. Blocked lots are released in FIFO order.
+- Cross-checks: with no blocking the new engine gives the same times as the old one for every lot; lots are conserved; JS and Python match on times, blocked hours and max queue; buffer limits are never exceeded (see tests).
+- Example `examples/pharma_buffers.json`: 7.9 batches/week and 8.83 days lead time, against 7.7 and 9.01 without buffers (single run, illustrative). Most blocked resource-hours are forklift moves holding a pallet.
+- Learn: with finite buffers, forklifts blocked holding pallets become a hidden bottleneck.
+- Limits: no AGV path conflicts, no shift handovers, delay-only stages (wait, wave, hold) have no capacity limit, nothing validated against a real plant. In the view, buffer size change below 1 is clamped to 1.

@@ -2,7 +2,7 @@
 import json, sys
 from plantsim.cli import load
 from plantsim.model import simulate
-def ref(path, zero=False, seeds=(1,)):
+def ref(path, zero=False, seeds=(1,)):   # (buffered configs go through the same function)
     out = []
     for sd in seeds:
         p = load(path); p.seed = sd
@@ -11,7 +11,7 @@ def ref(path, zero=False, seeds=(1,)):
                 s.cv = 0; s.breakdown_p = 0; s.retest_p = 0
                 if s.kind == 'hold': s.p = 0
         r = simulate(p)
-        out.append({"seed": sd, "tp": r.throughput_per_week, "lt": r.mean_lead_time_days, "done": [b.done for b in r.batches][:30]})
+        out.append({"seed": sd, "tp": r.throughput_per_week, "lt": r.mean_lead_time_days, "done": [b.done for b in r.batches][:30], "blocked": [st.blocked for st in r.stats], "maxq": [st.max_queue for st in r.stats]})
     return out
 if __name__ == "__main__":
-    json.dump({"zero": ref("examples/pharma_flow.json", True), "stat": ref("examples/pharma_flow.json", False, tuple(range(1, 21)))}, open(sys.argv[1], "w"))
+    json.dump({"zero": ref("examples/pharma_flow.json", True), "stat": ref("examples/pharma_flow.json", False, tuple(range(1, 21))), "bufzero": ref("examples/pharma_buffers.json", True), "bufstat": ref("examples/pharma_buffers.json", False, tuple(range(1, 21)))}, open(sys.argv[1], "w"))

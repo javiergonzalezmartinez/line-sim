@@ -33,7 +33,7 @@ svg{background:#fff;border:1px solid #d5dce4;border-radius:6px}
 <div class="card"><small>Mean lead time</small><b id="k_lt"></b></div><div class="card"><small>Busiest stage</small><b id="k_bn"></b></div>
 <div class="card"><small>Forklift pool busy</small><b id="k_fk"></b></div>
 <div class="card"><small>Lots rejected (QA)</small><b id="k_rej"></b></div><div class="card"><small>Picks where FEFO differs from FIFO</small><b id="k_fefo"></b></div>
-<div class="card"><small>Clock</small><b id="clock"></b></div><div class="card"><small>Lots/batches finished</small><b id="fin"></b></div><div class="card"><small>In the plant now</small><b id="wip"></b></div></div>
+<div class="card"><small>Blocked resource-hours (finite buffers)</small><b id="k_blk"></b></div><div class="card"><small>Clock</small><b id="clock"></b></div><div class="card"><small>Lots/batches finished</small><b id="fin"></b></div><div class="card"><small>In the plant now</small><b id="wip"></b></div></div>
 <div class="bar"><button id="pp">Pause</button><label>Speed <select id="sp"><option value="0.5">0.5 h/s (watch trips)</option><option value="2">2 h/s</option><option value="6">6 h/s</option><option value="12" selected>12 h/s</option><option value="24">1 day/s</option><option value="72">3 days/s</option></select></label>
 <input id="sl" type="range" min="0" max="100" step="1" value="0"></div>
 <div class="grid"><div><svg id="v" viewBox="0 0 1060 __SH__" width="100%"></svg>
@@ -63,7 +63,7 @@ const boxes=L.map(l=>{const r=el(v,"rect",{x:l.x,y:l.y,width:l.w,height:l.h,rx:8
 const layer=el(v,"g",{});const fkLayer=el(v,"g",{});
 // parameters
 const H=Object.fromEntries(location.hash.slice(1).split("&").filter(Boolean).map(x=>x.split("=")));
-const G={release_every:BASE.release_every,seed:BASE.seed,speed:+H.sp||BASE.speed_kmh||6,handling:H.h!=null?+H.h:(BASE.handling_min==null?6:BASE.handling_min),rule:H.rule==='FIFO'?'FIFO':'FEFO',brk_mult:1,changeover_mult:1,retest_p:null,labs247:false};
+const G={release_every:BASE.release_every,seed:BASE.seed,speed:+H.sp||BASE.speed_kmh||6,handling:H.h!=null?+H.h:(BASE.handling_min==null?6:BASE.handling_min),rule:H.rule==='FIFO'?'FIFO':'FEFO',brk_mult:1,changeover_mult:1,retest_p:null,labs247:false,buf:H.buf!=="0",bufadd:+H.ba||0};
 const panel=document.getElementById("panel");
 function num(label,get,set,step,min,max){const lb=document.createElement("label");lb.textContent=label;const i=document.createElement("input");i.type="number";i.value=get();i.step=step;i.min=min;i.max=max;i.oninput=()=>{const x=parseFloat(i.value);if(!isNaN(x)){set(x);schedule()}};lb.appendChild(i);panel.appendChild(lb)}
 function h3(t){const h=document.createElement("h3");h.textContent=t;panel.appendChild(h)}
@@ -72,11 +72,14 @@ h3("Resources (servers)");const SV={};BASE.stages.forEach(s=>{if(s.kind==="proce
 h3("Multipliers");num("Forklift speed (km/h)",()=>G.speed,x=>G.speed=Math.max(0.2,x),1,0.2,25);num("Handling per leg (min)",()=>G.handling,x=>G.handling=Math.max(0,x),1,0,120);num("Breakdown chance x",()=>G.brk_mult,x=>G.brk_mult=Math.max(0,x),0.5,0,10);num("Changeover time x",()=>G.changeover_mult,x=>G.changeover_mult=Math.max(0,x),0.5,0,5);
 const rl=document.createElement("label");rl.textContent="Raw-material pick rule";const rsel=document.createElement("select");["FEFO","FIFO"].forEach(x=>{const o=document.createElement("option");o.textContent=x;rsel.appendChild(o)});rsel.value=G.rule;rsel.onchange=()=>{G.rule=rsel.value;schedule()};rl.appendChild(rsel);panel.appendChild(rl);
 const lb=document.createElement("label");lb.textContent="QC/QA open 24/7";const cb=document.createElement("input");cb.type="checkbox";cb.onchange=()=>{G.labs247=cb.checked;schedule()};lb.appendChild(cb);panel.appendChild(lb);
+{const l2=document.createElement("label");l2.textContent="Finite buffers (blocking)";const c2=document.createElement("input");c2.type="checkbox";c2.checked=G.buf;c2.onchange=()=>{G.buf=c2.checked;schedule()};l2.appendChild(c2);panel.appendChild(l2)}
+num("Buffer size change (lots, + or -)",()=>G.bufadd,x=>G.bufadd=Math.round(x),1,-5,20);
 const rs=document.createElement("button");rs.className="sec";rs.textContent="Reset";rs.onclick=()=>location.reload();panel.appendChild(rs);
 function params(){const q=JSON.parse(JSON.stringify(BASE));q.release_every=G.release_every;q.seed=G.seed;
  q.speed_kmh=G.speed;q.handling_min=G.handling;
  q.stages.forEach(s=>{if(s.kind==="move"){s.servers=SV[s.pool]}else if(s.kind==="process")s.servers=SV[s.name];
   if(s.pool)s.servers=SV[s.pool];if(s.breakdown_p)s.breakdown_p=Math.min(1,s.breakdown_p*G.brk_mult);if(s.changeover)s.changeover*=G.changeover_mult;
+  if(!G.buf)delete s.buffer;else if(s.buffer!=null)s.buffer=Math.max(1,s.buffer+G.bufadd);
   if(G.labs247&&s.window&&/QC|QA/.test(s.name)){delete s.window;s.workdays=7}});return q}
 let tm=0;function schedule(){clearTimeout(tm);tm=setTimeout(run,150)}
 function run(){P=params();R=simulate(P);t0=P.warmup;tmax=P.horizon-t0;
@@ -86,17 +89,18 @@ function run(){P=params();R=simulate(P);t0=P.warmup;tmax=P.horizon-t0;
  R.fk=[];for(const name in R.pools){const n=SV[name];R.fk.push({name,els:[...Array(n)].map(()=>el(fkLayer,"rect",{width:14,height:9,rx:2,fill:"#070f26",visibility:"hidden"}))})}
  const sl=document.getElementById("sl");sl.max=Math.round(tmax);if(T>tmax)T=0;
  document.getElementById("k_tp").textContent=R.throughput.toFixed(1)+" batches/week";document.getElementById("k_lt").textContent=R.leadDays.toFixed(1)+" days";
- document.getElementById("k_bn").textContent=R.bottleneck;document.getElementById("k_rej").textContent=R.rejected;document.getElementById("k_fk").textContent=Object.values(R.pools).map(x=>(100*x).toFixed(0)+"%").join(", ")||"-";
+ document.getElementById("k_bn").textContent=R.bottleneck;document.getElementById("k_rej").textContent=R.rejected;document.getElementById("k_blk").textContent=(function(){let a=0,m=0;R.stats.forEach((x,k)=>{a+=x.blocked||0;if(P.stages[k].kind==="move")m+=x.blocked||0});return a.toFixed(0)+" h ("+m.toFixed(0)+" h forklifts)"})();document.getElementById("k_fk").textContent=Object.values(R.pools).map(x=>(100*x).toFixed(0)+"%").join(", ")||"-";
  drawUtil();drawChart();buildLog();draw()}
-function state(b,T){const t=T+t0;if(t<b.r)return null;for(const[k,a,s,e]of b.t){if(t<a)return null;if(t<s)return[k,"wait"];if(t<e)return[k,"proc",(t-s)/Math.max(e-s,1e-9)]}return null}
-function draw(){const cnt=L.map(_=>({w:0,p:0,mv:0}));let fin=0,wip=0;const fu={};for(const n in R.pools)fu[n]=0;
+function state(b,T){const t=T+t0;if(t<b.r)return null;for(const[k,a,s,e,lv]of b.t){if(t<a)return null;if(t<s)return[k,"wait"];if(t<e)return[k,"proc",(t-s)/Math.max(e-s,1e-9)];if(lv!=null&&t<lv)return[k,"block"]}return null}
+function draw(){const cnt=L.map(_=>({w:0,p:0,mv:0,b:0})),lim=L.map(_=>null);P.stages.forEach((s,k)=>{if(s.buffer!=null&&s.kind==="process")lim[stLoc[k]]=s.buffer});let fin=0,wip=0;const fu={};for(const n in R.pools)fu[n]=0;
  R.vis.forEach((b,i)=>{const d=dots[i];const lastE=b.t[b.t.length-1][3];if(T+t0>=lastE){d.setAttribute("visibility","hidden");fin++;return}
   const st=state(b,T);if(!st){d.setAttribute("visibility","hidden");return}wip++;const[k,ph,f]=st,s=P.stages[k];let x,y;
   if(s.kind==="move"&&ph==="proc"){const p=ctr(L[mvFrom[k]]),q=ctr(L[mvTo[k]]);x=p.x+(q.x-p.x)*f;y=p.y+(q.y-p.y)*f;const e=R.fk.find(z=>z.name===s.pool).els[fu[s.pool]++];if(e){e.setAttribute("x",x-7);e.setAttribute("y",y+7);e.setAttribute("visibility","visible")}cnt[mvFrom[k]].mv++}
-  else{const i2=s.kind==="move"?mvFrom[k]:stLoc[k],l=L[i2],c=cnt[i2],slot=ph==="wait"?c.w++:c.p++,cols=Math.max(1,Math.floor((l.w-16)/17)),col=slot%cols,row=Math.floor(slot/cols);x=l.x+14+col*17;y=ph==="proc"?l.y+34+row*15:l.y+l.h-24-row*15}
-  d.setAttribute("cx",x);d.setAttribute("cy",y);d.setAttribute("visibility","visible");d.setAttribute("stroke",b.rej&&s.kind==="hold"?"#b3261e":ph==="wait"?"#c98a00":"#00857c");d.setAttribute("stroke-width",3)});
+  else if(s.kind==="move"&&ph==="block"){const l=L[mvTo[k]],c=cnt[mvTo[k]],slot=c.b++,cols=Math.max(1,Math.floor((l.w-16)/17));x=l.x+14+(slot%cols)*17;y=l.y+l.h-24-Math.floor(slot/cols)*15;const e=R.fk.find(z=>z.name===s.pool).els[fu[s.pool]++];if(e){e.setAttribute("x",x-7);e.setAttribute("y",y+7);e.setAttribute("visibility","visible")}}
+  else{const i2=s.kind==="move"?mvFrom[k]:stLoc[k],l=L[i2],c=cnt[i2],slot=ph==="wait"||ph==="block"?(ph==="wait"?c.w++:c.w+c.b++):c.p++,cols=Math.max(1,Math.floor((l.w-16)/17)),col=slot%cols,row=Math.floor(slot/cols);x=l.x+14+col*17;y=ph==="proc"?l.y+34+row*15:l.y+l.h-24-row*15}
+  d.setAttribute("cx",x);d.setAttribute("cy",y);d.setAttribute("visibility","visible");d.setAttribute("stroke",b.rej&&s.kind==="hold"?"#b3261e":ph==="block"?"#b3261e":ph==="wait"?"#c98a00":"#00857c");d.setAttribute("stroke-width",3)});
  R.fk.forEach(p=>p.els.forEach((e,j)=>{if(j>=fu[p.name])e.setAttribute("visibility","hidden")}));
- L.forEach((l,i)=>{boxes[i].q.textContent="waiting "+cnt[i].w+" | working "+cnt[i].p+(cnt[i].mv?" | leaving "+cnt[i].mv:"");boxes[i].r.setAttribute("fill",cnt[i].w>=3?"#fff0cf":"#f7f9fb")});
+ L.forEach((l,i)=>{boxes[i].q.textContent="waiting "+cnt[i].w+(lim[i]!=null?"/"+lim[i]:"")+" | working "+cnt[i].p+(cnt[i].b?" | blocked "+cnt[i].b:"")+(cnt[i].mv?" | leaving "+cnt[i].mv:"");boxes[i].r.setAttribute("fill",cnt[i].b?"#fbe0dd":cnt[i].w>=3?"#fff0cf":"#f7f9fb")});
  const t=T+t0,day=Math.floor(t/24),h=Math.floor(t%24);document.getElementById("clock").textContent=["Mon","Tue","Wed","Thu","Fri","Sat","Sun"][day%7]+" "+String(h).padStart(2,"0")+":00 (day "+(day+1)+")";
  document.getElementById("fin").textContent=fin;document.getElementById("wip").textContent=wip;document.getElementById("sl").value=T;
  if(cur)cur.setAttribute("x1",cx(T)),cur.setAttribute("x2",cx(T));if(ecCur){ecCur.setAttribute("x1",cx(T));ecCur.setAttribute("x2",cx(T))}if(typeof logDraw==="function")logDraw()}
