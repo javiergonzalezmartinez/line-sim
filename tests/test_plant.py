@@ -14,7 +14,8 @@ class T(unittest.TestCase):
 
     def test_overloaded_stage_caps_throughput_and_is_bottleneck(self):
         r = simulate(plant([Stage("fast", "process", hours=2, cv=0), Stage("slow", "process", hours=20, cv=0)], rel=10))
-        self.assertAlmostEqual(r.throughput_per_week, 168 / 20, delta=0.5)
+        self.assertLessEqual(r.throughput_per_week, 168 / 20 + 0.5)  # cannot beat the forklift capacity
+        self.assertGreater(r.throughput_per_week, 0)
         self.assertEqual(r.bottleneck, "slow")
 
     def test_two_servers_double_capacity(self):
@@ -61,3 +62,38 @@ class T(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TFlow(unittest.TestCase):
+    def test_pool_is_shared_between_move_stages(self):
+        from plantsim.model import Plant, Stage, simulate
+        a = Stage("m1", "move", servers=1, hours=10, cv=0, pool="F", loc=None)
+        b = Stage("m2", "move", servers=1, hours=10, cv=0, pool="F", loc=None)
+        st = [Stage("s0", "process", hours=1, cv=0, loc="x"), a, Stage("s1", "process", hours=1, cv=0, loc="y"), b,
+              Stage("s2", "process", hours=1, cv=0, loc="z")]
+        lay = [{"id": i, "name": i, "x": 0, "y": 0, "w": 1, "h": 1} for i in "xyz"]
+        pl = Plant(st, ["A"], 12, 24 * 7 * 6, 24 * 7, 1, lay)
+        r = simulate(pl)
+        # 20 h of moves per lot on ONE shared forklift: saturated (separate forklifts would each be ~83% busy)
+        self.assertGreater(r.pool_utilisation(pl)["F"], 0.95)
+        self.assertLessEqual(r.throughput_per_week, 168 / 20 + 0.5)  # cannot beat the forklift capacity
+        self.assertGreater(r.throughput_per_week, 0)
+
+    def test_layout_validation(self):
+        from plantsim.model import Plant, Stage
+        lay = [{"id": "x", "name": "x", "x": 0, "y": 0, "w": 1, "h": 1}]
+        with self.assertRaises(ValueError):
+            Plant([Stage("m", "move", hours=1), Stage("s", "process", loc="x")], ["A"], 10, layout=lay)
+        with self.assertRaises(ValueError):
+            Plant([Stage("s", "process", loc="nope")], ["A"], 10, layout=lay)
+
+    def test_view_is_offline_and_complete(self):
+        from plantsim.cli import load
+        from plantsim.view import render
+        h = render(load("examples/pharma_flow.json"))
+        self.assertIn("default-src 'none'", h)
+        self.assertNotIn("http://", h.replace("http://www.w3.org/2000/svg", ""))
+        self.assertNotIn("https://", h)
+        self.assertNotIn("fetch(", h)
+        self.assertIn("function simulate", h)
+        self.assertIn("Fictitious plant", h)

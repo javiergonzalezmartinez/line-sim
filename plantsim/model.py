@@ -17,7 +17,7 @@ from typing import Dict, List, Optional
 @dataclass
 class Stage:
     name: str
-    kind: str                       # "process" | "wait" | "wave"
+    kind: str                       # "process" | "move" | "wait" | "wave"
     servers: int = 1
     hours: float = 0.0              # mean process time per batch (process/wait)
     cv: float = 0.1                 # variability of the process time (lognormal-ish via gamma)
@@ -28,6 +28,9 @@ class Stage:
     workdays: int = 7               # 5 = Monday-Friday only
     retest_p: float = 0.0           # probability that the step has to be repeated (e.g. OOS investigation)
     waves: Optional[List[float]] = None  # for kind "wave": hours of the day when a dispatch leaves
+    loc: Optional[str] = None       # location id on the layout where the batch sits during this stage
+    pool: Optional[str] = None      # shared resource pool (e.g. forklifts); stages with the same pool share servers
+    events: Optional[list] = None   # signal/transaction templates for the event layer (used by the browser view)
 
 
 @dataclass
@@ -38,6 +41,7 @@ class Plant:
     horizon: float = 24 * 7 * 12    # simulated hours
     warmup: float = 24 * 7 * 2
     seed: int = 1
+    layout: Optional[list] = None   # [{id, name, x, y, w, h}] floor plan for the animated view
 
     def __post_init__(self):
         if not self.stages or not self.products:
@@ -47,10 +51,23 @@ class Plant:
         for s in self.stages:
             if s.servers < 1:
                 raise ValueError(f"{s.name}: servers must be >= 1")
-            if s.kind not in ("process", "wait", "wave"):
+            if s.kind not in ("process", "move", "wait", "wave"):
                 raise ValueError(f"{s.name}: unknown kind {s.kind}")
             if s.kind == "wave" and not s.waves:
                 raise ValueError(f"{s.name}: wave stage needs waves")
+        pools = {}
+        for s in self.stages:
+            if s.pool:
+                if pools.setdefault(s.pool, s.servers) != s.servers:
+                    raise ValueError(f"pool {s.pool}: all stages of a pool must declare the same servers")
+        if self.layout is not None:
+            ids = {l["id"] for l in self.layout}
+            for i, s in enumerate(self.stages):
+                if s.kind == "move":
+                    if i == 0 or i == len(self.stages) - 1:
+                        raise ValueError(f"{s.name}: a move cannot be the first or last stage")
+                elif s.loc not in ids:
+                    raise ValueError(f"{s.name}: loc {s.loc!r} is not in the layout")
 
 
 @dataclass
@@ -104,6 +121,15 @@ class Result:
         cap = st.servers * self.window
         return {"process": st.busy / cap, "setup": st.setup / cap, "repair": st.repair / cap}
 
+    def pool_utilisation(self, plant: "Plant") -> dict:
+        """Busy share of each shared pool (e.g. forklifts) over the window."""
+        out = {}
+        for name in {s.pool for s in plant.stages if s.pool}:
+            sts = [(s, st) for s, st in zip(plant.stages, self.stats) if s.pool == name]
+            n = sts[0][0].servers
+            out[name] = sum(st.busy + st.repair for _, st in sts) / (n * self.window)
+        return out
+
     @property
     def bottleneck(self) -> str:
         best, name = -1.0, ""
@@ -152,8 +178,9 @@ def _next_wave(t: float, waves: List[float]) -> float:
 
 def simulate(plant: Plant) -> Result:
     rng = random.Random(plant.seed)
-    free = [[0.0] * s.servers for s in plant.stages]
-    last = [[None] * s.servers for s in plant.stages]
+    keys = [s.pool or k for k, s in enumerate(plant.stages)]
+    free = {key: [0.0] * plant.stages[keys.index(key)].servers for key in keys}
+    last = {key: [None] * plant.stages[keys.index(key)].servers for key in keys}
     stats = [StageStat(s.name, s.servers) for s in plant.stages]
     w0, w1 = plant.warmup, plant.horizon
     batches: List[Batch] = []
@@ -184,14 +211,15 @@ def simulate(plant: Plant) -> Result:
             wait = 0.0
             pstart = at
         else:
-            j = min(range(s.servers), key=lambda x: free[k][x])
-            start = _next_open(max(at, free[k][j]), s)
+            key = keys[k]
+            j = min(range(s.servers), key=lambda x: free[key][x])
+            start = _next_open(max(at, free[key][j]), s)
             wait = start - at
             cur = start
-            if last[k][j] is not None and last[k][j] != b.product and s.changeover > 0:
+            if last[key][j] is not None and last[key][j] != b.product and s.changeover > 0:
                 credit("setup", st, cur, cur + s.changeover)
                 cur += s.changeover
-            last[k][j] = b.product
+            last[key][j] = b.product
             pstart = cur
             dur = _gamma(rng, s.hours, s.cv)
             while True:
@@ -206,7 +234,7 @@ def simulate(plant: Plant) -> Result:
                     continue
                 break
             end = cur
-            free[k][j] = end
+            free[key][j] = end
         b.waits[s.name] = wait
         b.trace.append((k, at, pstart, end))
         if w0 <= at < w1:
