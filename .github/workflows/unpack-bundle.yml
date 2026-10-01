@@ -19,6 +19,9 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
       - name: Check bundle
         run: |
           f=bundle.tgz.b64
@@ -37,11 +40,13 @@ jobs:
           tar xzf /tmp/bundle.tgz
           rm bundle.tgz.b64
       - name: Tests
-        run: python3 -m unittest discover -s tests -t .
+        run: |
+          python3 -m unittest discover -s tests -t .
+          node --test tests/*.test.js
       - name: Smoke run
         run: |
           python3 -m linesim examples/line.json --out /tmp/r.html
-          python3 -m plantsim examples/pharma.json --view /tmp/p.html
+          python3 -m plantsim examples/pharma_flow.json --view /tmp/p.html
       - name: Commit
         run: |
           git config user.name "github-actions"
