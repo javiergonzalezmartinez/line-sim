@@ -1,0 +1,18 @@
+{
+ "note": "FICTITIOUS plant, generic oral solid dose process. Illustrative numbers, not any real site.",
+ "products": ["A", "B", "C"],
+ "release_every": 20,
+ "horizon": 2016, "warmup": 336, "seed": 3,
+ "stages": [
+  {"name":"Receipt + quarantine","kind":"wait","hours":16,"cv":0.3},
+  {"name":"QC sampling + release","kind":"process","servers":2,"hours":6,"cv":0.3,"window":[8,16],"workdays":5},
+  {"name":"Dispensing","kind":"process","servers":1,"hours":6,"cv":0.15,"changeover":3},
+  {"name":"Granulation + drying","kind":"process","servers":1,"hours":9,"cv":0.15,"changeover":6,"breakdown_p":0.08,"repair":6},
+  {"name":"Compression","kind":"process","servers":2,"hours":10,"cv":0.2,"changeover":8,"breakdown_p":0.10,"repair":5},
+  {"name":"Coating","kind":"process","servers":1,"hours":11,"cv":0.15,"changeover":6,"breakdown_p":0.06,"repair":4},
+  {"name":"Packaging","kind":"process","servers":2,"hours":9,"cv":0.2,"changeover":5,"breakdown_p":0.10,"repair":3},
+  {"name":"QC lab release","kind":"process","servers":3,"hours":14,"cv":0.3,"window":[8,17],"workdays":5,"retest_p":0.04},
+  {"name":"QA record review","kind":"process","servers":1,"hours":3,"cv":0.3,"window":[9,16],"workdays":5},
+  {"name":"Dispatch","kind":"wave","waves":[10,15]}
+ ]
+}

@@ -1,0 +1,13 @@
+{
+  "stations": [
+    {"name": "Dispensing",  "cycle_time": 42, "cv": 0.15},
+    {"name": "Granulation", "cycle_time": 60, "cv": 0.20, "mtbf": 1800, "mttr": 240},
+    {"name": "Compression", "cycle_time": 50, "cv": 0.15, "mtbf": 2400, "mttr": 300},
+    {"name": "Coating",     "cycle_time": 55, "cv": 0.20, "mtbf": 3000, "mttr": 360},
+    {"name": "Packing",     "cycle_time": 45, "cv": 0.10, "mtbf": 1500, "mttr": 120}
+  ],
+  "buffers": [4, 4, 4, 4],
+  "duration": 86400,
+  "warmup": 7200,
+  "seed": 7
+}
