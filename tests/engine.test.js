@@ -9,7 +9,7 @@ assert.strictEqual(r.status, 0, String(r.stderr));
 const ref = JSON.parse(fs.readFileSync(tmp, 'utf8'));
 
 test('no randomness: JS and Python give identical batch completion times', () => {
-  const p = cfg(); p.seed = 1; p.stages.forEach(s => { s.cv = 0; s.breakdown_p = 0; s.retest_p = 0; });
+  const p = cfg(); p.seed = 1; p.stages.forEach(s => { s.cv = 0; s.breakdown_p = 0; s.retest_p = 0; if (s.kind === 'hold') s.p = 0; });
   const j = simulate(p);
   ref.zero[0].done.forEach((d, i) => assert.ok(Math.abs(j.batches[i].d - d) < 1e-9, `batch ${i}: ${j.batches[i].d} vs ${d}`));
   assert.ok(Math.abs(j.throughput - ref.zero[0].tp) < 1e-9);
@@ -32,7 +32,7 @@ test('same seed, same result; different seed differs', () => {
 
 test('one forklift and slow moves raise lead time; forklift pool utilisation grows', () => {
   const base = simulate(cfg());
-  const p = cfg(); p.stages.forEach(s => { if (s.pool) { s.servers = 1; s.hours = 3; } });
+  const p = cfg(); p.speed_kmh = 0.4; p.handling_min = 30; p.stages.forEach(s => { if (s.pool) s.servers = 1; });
   const slow = simulate(p);
   assert.ok(slow.leadDays > base.leadDays);
   assert.ok(slow.pools.Forklifts > base.pools.Forklifts * 3);

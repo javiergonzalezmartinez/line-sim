@@ -7,7 +7,9 @@ def ref(path, zero=False, seeds=(1,)):
     for sd in seeds:
         p = load(path); p.seed = sd
         if zero:
-            for s in p.stages: s.cv = 0; s.breakdown_p = 0; s.retest_p = 0
+            for s in p.stages:
+                s.cv = 0; s.breakdown_p = 0; s.retest_p = 0
+                if s.kind == 'hold': s.p = 0
         r = simulate(p)
         out.append({"seed": sd, "tp": r.throughput_per_week, "lt": r.mean_lead_time_days, "done": [b.done for b in r.batches][:30]})
     return out

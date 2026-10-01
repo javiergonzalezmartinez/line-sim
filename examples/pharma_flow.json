@@ -576,22 +576,32 @@
      "text": "Case label applied"
     },
     {
-     "at": 0.6,
+     "at": 0.58,
      "kind": "PLC",
      "src": "Palletizer",
-     "text": "State: picking layer 1"
+     "text": "State: running, pattern 5 layers x 12 cases (simulated)"
     },
     {
-     "at": 0.7,
+     "at": 0.6,
+     "to": 0.8,
+     "n": 5,
      "kind": "PLC",
-     "src": "Palletizer",
-     "text": "Layer 3 of 5 complete"
+     "src": "Palletizer robot",
+     "text": "Picking layer {i} of {n}, vacuum gripper OK"
+    },
+    {
+     "at": 0.64,
+     "to": 0.84,
+     "n": 5,
+     "kind": "PLC",
+     "src": "Palletizer robot",
+     "text": "Layer {i} of {n} placed: 12 cases, interlocked pattern"
     },
     {
      "at": 0.8,
      "kind": "PLC",
      "src": "Palletizer",
-     "text": "Pallet complete"
+     "text": "State: pallet complete, 60 cases"
     },
     {
      "at": 0.85,
@@ -684,6 +694,55 @@
      "kind": "QA",
      "src": "LIMS (simulated)",
      "text": "Results approved for {lot}"
+    }
+   ]
+  },
+  {
+   "name": "Deviation investigation (QA hold)",
+   "kind": "hold",
+   "loc": "fg",
+   "p": 0.15,
+   "hours": 48,
+   "cv": 0.5,
+   "window": [
+    9,
+    16
+   ],
+   "workdays": 5,
+   "reject_p": 0.3,
+   "events": [
+    {
+     "at": "arrive",
+     "kind": "QA",
+     "src": "QA (simulated)",
+     "text": "Deviation raised for {lot}: investigation opened"
+    },
+    {
+     "at": "arrive",
+     "kind": "WMS",
+     "src": "WMS (simulated)",
+     "text": "Pallet {lot} status: blocked (quality hold)"
+    },
+    {
+     "at": "end",
+     "kind": "QA",
+     "src": "QA (simulated)",
+     "text": "Investigation closed for {lot}: batch accepted",
+     "if": "ok"
+    },
+    {
+     "at": "end",
+     "kind": "QA",
+     "src": "QA (simulated)",
+     "text": "Investigation closed for {lot}: batch REJECTED",
+     "if": "rejected"
+    },
+    {
+     "at": "end",
+     "kind": "WMS",
+     "src": "WMS (simulated)",
+     "text": "Pallet {lot} moved to rejected stock for disposal (simulated)",
+     "if": "rejected"
     }
    ]
   },
@@ -782,5 +841,8 @@
     }
    ]
   }
- ]
+ ],
+ "m_per_px": 0.3,
+ "speed_kmh": 6,
+ "handling_min": 6
 }

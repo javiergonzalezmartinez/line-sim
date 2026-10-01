@@ -17,7 +17,7 @@ from typing import Dict, List, Optional
 @dataclass
 class Stage:
     name: str
-    kind: str                       # "process" | "move" | "wait" | "wave"
+    kind: str                       # "process" | "move" | "wait" | "wave" | "hold"
     servers: int = 1
     hours: float = 0.0              # mean process time per batch (process/wait)
     cv: float = 0.1                 # variability of the process time (lognormal-ish via gamma)
@@ -30,6 +30,8 @@ class Stage:
     waves: Optional[List[float]] = None  # for kind "wave": hours of the day when a dispatch leaves
     loc: Optional[str] = None       # location id on the layout where the batch sits during this stage
     pool: Optional[str] = None      # shared resource pool (e.g. forklifts); stages with the same pool share servers
+    p: float = 1.0                  # kind "hold": probability that a lot is held (e.g. a deviation investigation)
+    reject_p: float = 0.0           # kind "hold": probability that a held lot is rejected (leaves the plant)
     events: Optional[list] = None   # signal/transaction templates for the event layer (used by the browser view)
 
 
@@ -42,6 +44,9 @@ class Plant:
     warmup: float = 24 * 7 * 2
     seed: int = 1
     layout: Optional[list] = None   # [{id, name, x, y, w, h}] floor plan for the animated view
+    m_per_px: float = 0.0           # >0: transport time of move stages = Manhattan distance on the layout / speed + handling
+    speed_kmh: float = 6.0
+    handling_min: float = 6.0
 
     def __post_init__(self):
         if not self.stages or not self.products:
@@ -51,7 +56,7 @@ class Plant:
         for s in self.stages:
             if s.servers < 1:
                 raise ValueError(f"{s.name}: servers must be >= 1")
-            if s.kind not in ("process", "move", "wait", "wave"):
+            if s.kind not in ("process", "move", "wait", "wave", "hold"):
                 raise ValueError(f"{s.name}: unknown kind {s.kind}")
             if s.kind == "wave" and not s.waves:
                 raise ValueError(f"{s.name}: wave stage needs waves")
@@ -66,8 +71,19 @@ class Plant:
                 if s.kind == "move":
                     if i == 0 or i == len(self.stages) - 1:
                         raise ValueError(f"{s.name}: a move cannot be the first or last stage")
-                elif s.loc not in ids:
+                elif s.kind != "move" and s.loc not in ids:
                     raise ValueError(f"{s.name}: loc {s.loc!r} is not in the layout")
+        self.resolve_moves()
+
+    def resolve_moves(self):
+        if not (self.layout and self.m_per_px > 0):
+            return
+        pos = {l['id']: (l['x'] + l['w'] / 2, l['y'] + l['h'] / 2) for l in self.layout}
+        for i, s in enumerate(self.stages):
+            if s.kind == 'move':
+                a, b = pos[self.stages[i - 1].loc], pos[self.stages[i + 1].loc]
+                metres = (abs(a[0] - b[0]) + abs(a[1] - b[1])) * self.m_per_px
+                s.hours = (metres / (self.speed_kmh * 1000 / 60) + self.handling_min) / 60.0
 
 
 @dataclass
@@ -76,6 +92,7 @@ class Batch:
     product: str
     released: float
     done: Optional[float] = None
+    rejected: bool = False
     waits: Dict[str, float] = field(default_factory=dict)
     trace: list = field(default_factory=list)   # (stage index, arrive, start, end)
 
@@ -100,8 +117,12 @@ class Result:
     horizon: float
 
     @property
+    def rejected(self) -> int:
+        return sum(1 for b in self.batches if b.rejected and self.horizon - self.window <= b.done <= self.horizon)
+
+    @property
     def finished(self) -> List[Batch]:
-        return [b for b in self.batches if b.done is not None]
+        return [b for b in self.batches if b.done is not None and not b.rejected]
 
     @property
     def throughput_per_week(self) -> float:
@@ -202,6 +223,32 @@ def simulate(plant: Plant) -> Result:
         at, i, k = heapq.heappop(heap)
         b = batches[i]
         s, st = plant.stages[k], stats[k]
+        if s.kind == "hold":
+            if rng.random() >= s.p:                      # no deviation: the lot passes straight through
+                if k + 1 < len(plant.stages):
+                    heapq.heappush(heap, (at, i, k + 1))
+                else:
+                    b.done = at
+                continue
+            start = _next_open(at, s)
+            wait = start - at
+            end = start + _gamma(rng, s.hours, s.cv)
+            pstart = start
+            if rng.random() < s.reject_p:
+                b.rejected = True
+            if True:
+                b.waits[s.name] = wait
+                b.trace.append((k, at, pstart, end))
+                if w0 <= at < w1:
+                    st.wait += wait
+                    st.batches += 1
+                    st.max_queue_wait = max(st.max_queue_wait, wait)
+                    credit("busy", st, start, end)
+            if b.rejected or k + 1 >= len(plant.stages):
+                b.done = end
+            else:
+                heapq.heappush(heap, (end, i, k + 1))
+            continue
         if s.kind == "wave":
             end = _next_wave(at, s.waves)
             wait = end - at

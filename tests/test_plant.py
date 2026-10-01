@@ -97,3 +97,27 @@ class TFlow(unittest.TestCase):
         self.assertNotIn("fetch(", h)
         self.assertIn("function simulate", h)
         self.assertIn("Fictitious plant", h)
+
+
+class THold(unittest.TestCase):
+    def test_rejecting_hold_removes_lots_from_throughput(self):
+        from plantsim.model import Plant, Stage, simulate
+        st = [Stage("a", "process", hours=1, cv=0), Stage("qa", "hold", p=1.0, hours=2, cv=0, reject_p=1.0), Stage("b", "process", hours=1, cv=0)]
+        r = simulate(Plant(st, ["A"], 10, 24 * 7 * 6, 24 * 7, 1))
+        self.assertEqual(r.throughput_per_week, 0)
+        self.assertGreater(r.rejected, 0)
+        self.assertEqual(r.stats[2].batches, 0)          # nothing reaches the stage after the hold
+
+    def test_hold_with_zero_probability_is_transparent(self):
+        from plantsim.model import Plant, Stage, simulate
+        mk = lambda h: [Stage("a", "process", hours=1, cv=0), Stage("qa", "hold", p=h, hours=50, cv=0), Stage("b", "process", hours=1, cv=0)]
+        a = simulate(Plant(mk(0.0), ["A"], 10, 24 * 7 * 6, 24 * 7, 1))
+        self.assertAlmostEqual(a.mean_lead_time_days * 24, 2.0, places=6)
+
+    def test_move_time_from_layout_distance(self):
+        from plantsim.model import Plant, Stage
+        lay = [{"id": "x", "name": "x", "x": 0, "y": 0, "w": 100, "h": 100}, {"id": "y", "name": "y", "x": 300, "y": 100, "w": 100, "h": 100}]
+        st = [Stage("s0", "process", loc="x"), Stage("m", "move", servers=1, pool="F", hours=99), Stage("s1", "process", loc="y")]
+        p = Plant(st, ["A"], 10, layout=lay, m_per_px=0.5, speed_kmh=6, handling_min=6)
+        metres = (300 + 100) * 0.5            # centre to centre, Manhattan
+        self.assertAlmostEqual(p.stages[1].hours, (metres / 100 + 6) / 60, places=9)   # 6 km/h = 100 m/min
