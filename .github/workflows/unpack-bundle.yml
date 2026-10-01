@@ -1,0 +1,52 @@
+name: Unpack bundle and test
+
+# Runs when bundle.tgz.b64 is pushed. Decodes it into the repo root, runs the tests, commits, removes the bundle.
+# Needed because the browser upload path is one file per commit.
+on:
+  push:
+    paths:
+      - bundle.tgz.b64
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  unpack:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Check bundle
+        run: |
+          f=bundle.tgz.b64
+          fail() { echo "::error title=Invalid bundle::$1"; exit 1; }
+          [ -f "$f" ] || fail "$f is missing."
+          size=$(wc -c < "$f")
+          [ "$size" -ge 2000 ] || fail "$f is only $size bytes (empty or truncated). Nothing changed."
+          base64 -d "$f" > /tmp/bundle.tgz 2>/dev/null || fail "not valid base64."
+          tar tzf /tmp/bundle.tgz > /tmp/bundle.list 2>/dev/null || fail "not a valid tar.gz."
+          grep -qx './linesim/sim.py' /tmp/bundle.list || fail "bundle has no linesim/sim.py."
+      - name: Decode
+        run: |
+          set -e
+          base64 -d bundle.tgz.b64 > /tmp/bundle.tgz
+          sha256sum /tmp/bundle.tgz
+          tar xzf /tmp/bundle.tgz
+          rm bundle.tgz.b64
+      - name: Tests
+        run: python3 -m unittest discover -s tests -t .
+      - name: Smoke run
+        run: |
+          python3 -m linesim examples/line.json --out /tmp/r.html
+          python3 -m plantsim examples/pharma.json --view /tmp/p.html
+      - name: Commit
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          git diff --cached --quiet && { echo 'No changes.'; exit 0; }
+          git commit -m "Update from bundle (tests green)"
+          git push
