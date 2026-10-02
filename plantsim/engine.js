@@ -3,12 +3,13 @@ function makeRng(seed){let a=(seed>>>0)||1;const u=()=>{a|=0;a=a+0x6D2B79F5|0;le
   const norm=()=>{let x=0,y=0;while(x===0)x=u();y=u();return Math.sqrt(-2*Math.log(x))*Math.cos(2*Math.PI*y)};
   const gam=k=>{if(k<1){return gam(k+1)*Math.pow(u()||1e-12,1/k)}const d=k-1/3,c=1/Math.sqrt(9*d);for(;;){let x,v;do{x=norm();v=1+c*x}while(v<=0);v=v*v*v;const r=u();if(r<1-0.0331*x*x*x*x||Math.log(r)<0.5*x*x+d*(1-v+Math.log(v)))return d*v}};
   return{u,gamma:(mean,cv)=>{if(mean<=0)return 0;if(cv<=0)return mean;const k=1/(cv*cv);return gam(k)*mean/k}}}
-function nextOpen(t,s){if(!s.window&&(s.workdays==null||s.workdays>=7))return t;const o=s.window?s.window[0]:0,c=s.window?s.window[1]:24,wd=s.workdays==null?7:s.workdays;
+function nextWindow(t,s){if(!s.window&&(s.workdays==null||s.workdays>=7))return t;const o=s.window?s.window[0]:0,c=s.window?s.window[1]:24,wd=s.workdays==null?7:s.workdays;
   for(let i=0;i<14;i++){const day=Math.floor(t/24),h=t-day*24;if(day%7<wd){if(h<o)return day*24+o;if(h<c)return t}t=(day+1)*24}return t}
+function nextOpen(t,s){for(let i=0;i<50;i++){t=nextWindow(t,s);let moved=false;for(const [a,b] of (s.breaks||[])){const h=t-Math.floor(t/24)*24;if(a<=h&&h<b){t+=b-h;moved=true}}if(!moved)return t}return t}
 function nextWave(t,w){const day=Math.floor(t/24),ws=[...w].sort((a,b)=>a-b);for(let d=day;d<day+8;d++)for(const x of ws)if(d*24+x>=t)return d*24+x;return t}
 function resolveMoves(P){if(!(P.layout&&P.m_per_px>0))return;const pos={};P.layout.forEach(l=>pos[l.id]=[l.x+l.w/2,l.y+l.h/2]);
   P.stages.forEach((s,i)=>{if(s.kind==="move"){const a=pos[P.stages[i-1].loc],b=pos[P.stages[i+1].loc],m=(Math.abs(a[0]-b[0])+Math.abs(a[1]-b[1]))*P.m_per_px;s.hours=(m/((P.speed_kmh||6)*1000/60)+(P.handling_min==null?6:P.handling_min))/60}})}
-function simulate(P){resolveMoves(P);P.stages.forEach(s=>{if(s.capacity!=null){if(s.kind!=="wait"||s.capacity<1)throw new Error(s.name+": capacity must be >= 1 and only applies to wait stages");s.kind="process";s.servers=s.capacity}});if(P.stages.some(x=>x.buffer!=null))return simulateDES(P);
+function simulate(P){resolveMoves(P);P.stages.forEach(s=>{for(const [a,b] of (s.breaks||[]))if(!(a>=0&&a<b&&b<=24))throw new Error(s.name+": each break must satisfy 0 <= from < to <= 24")});P.stages.forEach(s=>{if(s.capacity!=null){if(s.kind!=="wait"||s.capacity<1)throw new Error(s.name+": capacity must be >= 1 and only applies to wait stages");s.kind="process";s.servers=s.capacity}});if(P.stages.some(x=>x.buffer!=null))return simulateDES(P);
   const rng=makeRng(P.seed||1),S=P.stages,n=S.length,keys=S.map((s,k)=>s.pool||String(k));
   const free={},last={};keys.forEach((key,k)=>{if(!free[key]){free[key]=Array(S[k].servers||1).fill(0);last[key]=Array(S[k].servers||1).fill(null)}});
   const st=S.map(s=>({busy:0,setup:0,repair:0,wait:0,n:0}));const w0=P.warmup,w1=P.horizon;

@@ -198,3 +198,35 @@ class CapacityTests(unittest.TestCase):
             plant([Stage("x", "process", hours=1, capacity=2)])
         with self.assertRaises(ValueError):
             plant([Stage("x", "wait", hours=1, capacity=0)])
+
+
+class BreakTests(unittest.TestCase):
+    def test_no_start_inside_a_break(self):
+        s = Stage("S", "process", hours=1, breaks=[[12, 13]])
+        self.assertEqual(_next_open(11.0, s), 11.0)
+        self.assertEqual(_next_open(12.0, s), 13.0)
+        self.assertAlmostEqual(_next_open(24 + 12.5, s), 24 + 13.0)
+        self.assertEqual(_next_open(13.0, s), 13.0)
+
+    def test_breaks_combine_with_the_calendar_window(self):
+        s = Stage("S", "process", hours=1, window=(8, 16), workdays=5, breaks=[[12, 13], [15, 24]])
+        self.assertEqual(_next_open(12.2, s), 13.0)
+        self.assertEqual(_next_open(15.5, s), 24 + 8.0)        # break runs past the window close, so next day 08:00
+        self.assertEqual(_next_open(4 * 24 + 15.5, s), 7 * 24 + 8.0)  # Friday afternoon -> Monday 08:00
+
+    def test_adjacent_breaks_are_chained(self):
+        s = Stage("S", "process", hours=1, breaks=[[6, 7], [7, 8]])
+        self.assertEqual(_next_open(6.5, s), 8.0)
+
+    def test_lead_time_includes_the_wait_for_the_break_to_end(self):
+        r = simulate(plant([Stage("S", "process", hours=2, cv=0, breaks=[[0, 6]])], rel=24))
+        self.assertAlmostEqual(r.mean_lead_time_days * 24, 8.0, delta=0.01)
+
+    def test_a_running_lot_is_not_interrupted(self):
+        r = simulate(plant([Stage("S", "process", hours=5, cv=0, breaks=[[1, 2]])], rel=24))
+        self.assertAlmostEqual(r.mean_lead_time_days * 24, 5.0, delta=0.01)
+
+    def test_invalid_break_is_rejected(self):
+        for b in ([[5, 5]], [[-1, 2]], [[20, 25]]):
+            with self.assertRaises(ValueError):
+                plant([Stage("S", "process", hours=1, breaks=b)])

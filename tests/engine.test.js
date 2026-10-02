@@ -73,3 +73,10 @@ test('capacity on a wait stage limits the flow (JS)', () => {
   assert.ok(Math.abs(simulate(mk(2)).throughput - 16.8) < 0.6);
   assert.throws(() => simulate({ stages: [{ name: 'x', kind: 'process', hours: 1, capacity: 2 }], products: ['A'], release_every: 10, horizon: 500, warmup: 0 }));
 });
+
+test('daily breaks delay starts but never interrupt a running lot (JS)', () => {
+  const mk = (h, br) => ({ stages: [{ name: 'S', kind: 'process', hours: h, cv: 0, breaks: br }], products: ['A'], release_every: 24, horizon: 24 * 7 * 20, warmup: 24 * 7 * 2, seed: 1 });
+  assert.ok(Math.abs(simulate(mk(2, [[0, 6]])).leadDays * 24 - 8) < 0.01);
+  assert.ok(Math.abs(simulate(mk(5, [[1, 2]])).leadDays * 24 - 5) < 0.01);
+  assert.throws(() => simulate(mk(1, [[5, 5]])));
+});

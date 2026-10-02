@@ -20,7 +20,7 @@ Use `examples/pharma_flow.json` for the material flow (dock, warehouse quarantin
 
 Tests: `python3 -m unittest discover -s tests -t .` and `node --test tests/`. The JS engine is checked against Python: identical completion times with randomness off, means within 3% over 20 seeds with randomness on.
 
-Not modelled yet: finite buffers between stages, shift handovers, material shortages, deviations and QA holds beyond a retest chance, campaign sizing. All numbers are invented and illustrative.
+Not modelled yet: finite buffers between stages, material shortages, deviations and QA holds beyond a retest chance, campaign sizing. All numbers are invented and illustrative.
 
 ## Signal and transaction layer
 Every simulated lot generates PLC/sensor events (dock door, barcode scans, scales, conveyors, palletizer states, labelling, serialization, forklift RFID), WMS events (goods receipt, putaway and transfer orders, bin status), QA/LIMS events and ERP events (goods receipt, quarantine to unrestricted release, goods issue to production order, operation confirmations, backflush, outbound delivery and goods issue). The page shows a live log with filters per kind and lot, an events-per-6h chart, and CSV/JSON export.
@@ -38,7 +38,7 @@ Document numbers are simulated sequence numbers. No SAP field names or transacti
 - **FEFO vs FIFO**: raw-material lots get a simulated shelf life; each dispensing picks from released, unconsumed lots by earliest expiry (FEFO) or earliest release (FIFO). The page counts the picks where the two rules differ. Tested against an independent brute-force recomputation.
 - **MQTT-style message view**: each signal can be shown as a topic and JSON payload (`fictitious-plant/<area>/<device>`, invented naming), exportable as JSON lines. No broker or real protocol is involved.
 - **Palletizer detail**: pattern (5 layers x 12 cases), robot pick and place per layer, pallet complete with case count.
-Still not modelled: finite buffers and blocking between stages, shift handovers, material shortages, AGV traffic, real OPC UA/MQTT/IDoc interfaces.
+Still not modelled: finite buffers and blocking between stages, material shortages, AGV traffic, real OPC UA/MQTT/IDoc interfaces.
 
 ## Milestone 6: finite buffers and blocking (illustrative)
 
@@ -48,4 +48,4 @@ A process or move stage can have `buffer`: the maximum number of lots waiting in
 - Cross-checks: with no blocking the new engine gives the same times as the old one for every lot; lots are conserved; JS and Python match on times, blocked hours and max queue; buffer limits are never exceeded (see tests).
 - Example `examples/pharma_buffers.json`: 7.9 batches/week and 8.83 days lead time, against 7.7 and 9.01 without buffers (single run, illustrative). Most blocked resource-hours are forklift moves holding a pallet.
 - Learn: with finite buffers, forklifts blocked holding pallets become a hidden bottleneck.
-- Limits: no AGV path conflicts, no shift handovers, wave and hold stages have no capacity limit (a wait stage can have one: `"capacity": N`, modelled as N resources, shown as a process in the view), nothing validated against a real plant. In the view, buffer size change below 1 is clamped to 1.
+- Limits: no AGV path conflicts, no shift-level staffing (a stage can have daily `breaks` gaps: `"breaks": [[6,6.5]]` = no new lot starts 06:00-06:30; a running lot is not interrupted), wave and hold stages have no capacity limit (a wait stage can have one: `"capacity": N`, modelled as N resources, shown as a process in the view), nothing validated against a real plant. In the view, buffer size change below 1 is clamped to 1.

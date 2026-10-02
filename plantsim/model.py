@@ -34,6 +34,7 @@ class Stage:
     reject_p: float = 0.0           # kind "hold": probability that a held lot is rejected (leaves the plant)
     buffer: Optional[int] = None    # max lots waiting in front of a process/move stage (None = unlimited). With a limit, a finished lot stays in its resource (blocked) until there is room
     capacity: Optional[int] = None  # kind "wait": max lots resting at once (e.g. quarantine rack positions). None = unlimited. A wait with a capacity is modelled as a process stage with that many resources (no changeover, no breakdowns)
+    breaks: Optional[list] = None   # daily gaps [[from_hour, to_hour], ...] (lunch, shift handover): no NEW lot starts inside a gap; a lot already running is not interrupted
     events: Optional[list] = None   # signal/transaction templates for the event layer (used by the browser view)
 
 
@@ -64,6 +65,9 @@ class Plant:
                 raise ValueError(f"{s.name}: servers must be >= 1")
             if s.buffer is not None and (s.buffer < 0 or s.kind not in ("process", "move")):
                 raise ValueError(f"{s.name}: buffer must be >= 0 and only applies to process/move stages")
+            for a, b in (s.breaks or []):
+                if not 0 <= a < b <= 24:
+                    raise ValueError(f"{s.name}: each break must satisfy 0 <= from < to <= 24")
             if s.kind not in ("process", "move", "wait", "wave", "hold"):
                 raise ValueError(f"{s.name}: unknown kind {s.kind}")
             if s.kind == "wave" and not s.waves:
@@ -182,7 +186,21 @@ def _gamma(rng: random.Random, mean: float, cv: float) -> float:
 
 
 def _next_open(t: float, s: Stage) -> float:
-    """Earliest time >= t at which the stage may start a batch."""
+    """Earliest time >= t at which the stage may start a batch (calendar window, then daily break gaps)."""
+    for _ in range(50):
+        t = _next_window(t, s)
+        moved = False
+        for a, b in (s.breaks or []):
+            h = t - int(t // 24) * 24
+            if a <= h < b:
+                t += b - h
+                moved = True
+        if not moved:
+            return t
+    return t
+
+
+def _next_window(t: float, s: Stage) -> float:
     if s.window is None and s.workdays >= 7:
         return t
     o, c = s.window if s.window else (0.0, 24.0)
