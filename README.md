@@ -22,11 +22,11 @@ Everything is **synthetic**: no real plant, company or personal data. Parameters
 | ![Quality](docs/img/m18_quality.png) **Quality holds and rejections** | ![Process value](docs/img/m21_process.png) **Process value with deadband** |
 | ![Material](docs/img/m10_material.png) **Material shortages** | ![Faults](docs/img/m22_faults.png) **Injected sensor faults and excursions** |
 | ![What-if](docs/img/m23_whatif.png) **What-if A vs B** with 95% confidence intervals | ![Replay export](docs/img/m24_mqtt.png) **Sparkplug-style messages** and OPC UA-style nodes |
-| ![Energy](docs/img/m25_energy.png) **Energy per stage** (placeholder kW) | |
+| ![Energy](docs/img/m25_energy.png) **Energy per stage** (placeholder kW) | ![Flow views](docs/img/m27_flow.png) **Heat map, material flow, Gantt** |
 
 ## Milestones
 
-M1-M6 line simulator, plant model, signal layer, finite buffers and blocking. M7 buffer size 0. M8 capacity on wait stages. M9 shifts and breaks. M10 material shortages. M11 canonical events and schema validator. M12 8 state machines. M13 machine signals. M14 KPIs. M15 interface handshakes and a seed scenario. M16 handling units and pallets. M17 forklift/AGV transport. M18 quality status. M19 live dashboard. M21 analog process values. M22 fault injection (drift, step, stochastic excursion, calibration overdue). M23 what-if comparator with confidence intervals. M24 Sparkplug-style MQTT replay and OPC UA-style node list. M25 energy calculator (placeholder kW). Each one has tests and a section below.
+M1-M6 line simulator, plant model, signal layer, finite buffers and blocking. M7 buffer size 0. M8 capacity on wait stages. M9 shifts and breaks. M10 material shortages. M11 canonical events and schema validator. M12 8 state machines. M13 machine signals. M14 KPIs. M15 interface handshakes and a seed scenario. M16 handling units and pallets. M17 forklift/AGV transport. M18 quality status. M19 live dashboard. M21 analog process values. M22 fault injection (drift, step, stochastic excursion, calibration overdue). M23 what-if comparator with confidence intervals. M24 Sparkplug-style MQTT replay and OPC UA-style node list. M25 energy calculator (placeholder kW). M27 heat map, material flow and Gantt views. Each one has tests and a section below.
 
 ## What is real, illustrative, or not modelled
 
@@ -194,3 +194,11 @@ Not real Sparkplug on the wire: payloads are JSON, real Sparkplug B uses Protoco
 Energy is power times time: 1 kWh is 1 kW for 1 hour, 3.6 MJ (Wikipedia, kilowatt-hour, read 2 Oct 2026). The calculator takes the hours each machine spends in process, setup, repair and idle from the simulation and multiplies them by the kW you put under the config key `energy` (`default` for process stages, `stages` per stage name). It reports kWh per stage and state, per week, and per finished lot (window energy divided by lots finished in the window, a plant average).
 
 Every kW value in `examples/energy_demo.json` is an illustrative placeholder, not a measurement of any machine. Stages without a power entry are listed as "no kW configured". The ISO 50001 page was only seen as a listing, the standard was not read, so there is no claim of conformity. Not modelled: part-load curves, start-up peaks, HVAC, cleanroom and compressed-air base load, cost, CO2, vehicle energy unless given as a stage, per-lot tracing. Tests check kWh = kW x hours, hours add up to capacity, doubling kW doubles energy, defaults apply only to machines.
+
+## M27: heat map, material flow and Gantt (synthetic)
+
+`python -m plantsim.cli examples/pharma_flow.json --flow-view flow.html`
+
+Three views from the simulated batch traces (stage, arrive, start, end): a utilisation heat map (occupied share of each process stage per 7-day bucket), a Sankey-style material flow between process stages with the rejected branch, and a Gantt of the first finished lots (grey = waiting before a stage, colour = stage kind). The page is one HTML file with inline SVG.
+
+Limits: the heat map shows occupied time, which can include repair or setup inside a stage, not value-adding time. The flow diagram skips transport and wait stages and counts a lot at a stage if its trace reaches it; it is a drawn diagram with simple curves, not a layout-optimised Sankey. The Gantt axis is in simulated days, not calendar dates, and does not show shifts. Tests check heat values stay in 0-100%, occupied hours match the traces, lot counts are conserved along the flow, and each Gantt lot is sequential.
