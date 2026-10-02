@@ -30,6 +30,9 @@ class Stage:
     window: Optional[tuple] = None  # (open_hour, close_hour) on working days, None = 24/7
     workdays: int = 7               # 5 = Monday-Friday only
     retest_p: float = 0.0           # probability that the step has to be repeated (e.g. OOS investigation)
+    yield_mean: float = 0.0         # FME-022: mean yield per run (0 = yield not modelled); a run is drawn from a Beta distribution with this mean
+    yield_cv: float = 0.02          # coefficient of variation of the yield draw
+    yield_min: float = 0.0          # a run with yield below this threshold is repeated (rework) and counted in `low_yield`
     waves: Optional[List[float]] = None  # for kind "wave": hours of the day when a dispatch leaves
     loc: Optional[str] = None       # location id on the layout where the batch sits during this stage
     pool: Optional[str] = None      # shared resource pool (e.g. forklifts); stages with the same pool share servers
@@ -69,6 +72,9 @@ class Plant:
             raise ValueError("dispatch must be fifo, same_product_first, edd, spt or cr")
         if self.dispatch in ("edd", "cr") and self.due_h is None:
             raise ValueError("dispatch edd and cr need due_h")
+        for _s in self.stages:
+            if _s.yield_min and not (0 < _s.yield_mean < 1 and 0 < _s.yield_min < 1):
+                raise ValueError("yield_min needs 0 < yield_mean < 1 and 0 < yield_min < 1 (stage %s)" % _s.name)
         if self.conwip is not None and self.conwip < 1:
             raise ValueError("conwip must be >= 1")
         if self.hours_factor is not None and (any(p not in self.hours_factor for p in self.products) or any(v <= 0 for v in self.hours_factor.values())):
@@ -163,6 +169,7 @@ class StageStat:
     short_lots: int = 0            # lots that had to wait for material (inside the window)
     short_hours: float = 0.0       # resource-hours spent waiting for material (inside the window)
     max_queue: int = 0             # largest number of lots waiting in front of the stage (event-driven engine only)
+    low_yield: int = 0             # runs below `yield_min` that started inside the window (FME-022)
     reruns: int = 0                # repeats of the step (retest_p) that started inside the window
     rerun_hours: float = 0.0       # resource-hours of those repeats inside the window
 
@@ -218,6 +225,17 @@ class Result:
             if tot > best:
                 best, name = tot, st.name
         return name
+
+
+def _yield_low(rng, s) -> bool:
+    """FME-022: draw a yield from Beta(mean, cv) and say whether it is below the threshold. Needs 0 < yield_mean < 1 and a small enough cv."""
+    if not s.yield_min or not s.yield_mean:
+        return False
+    m, cv = s.yield_mean, max(s.yield_cv, 1e-6)
+    k = m * (1 - m) / (cv * m) ** 2 - 1.0
+    if k <= 0:
+        raise ValueError("yield_cv too large for this yield_mean")
+    return rng.betavariate(m * k, (1 - m) * k) < s.yield_min
 
 
 def _gamma(rng: random.Random, mean: float, cv: float) -> float:
@@ -360,7 +378,10 @@ def simulate_fifo(plant: Plant) -> Result:
                     r = _gamma(rng, s.repair, 0.5)
                     credit("repair", st, cur, cur + r)
                     cur += r
-                if s.retest_p and rng.random() < s.retest_p:
+                low = _yield_low(rng, s)
+                if low and w0 <= cur < w1:
+                    st.low_yield += 1
+                if low or (s.retest_p and rng.random() < s.retest_p):
                     dur = _gamma(rng, s.hours, s.cv)
                     if w0 <= cur < w1:
                         st.reruns += 1
@@ -549,7 +570,10 @@ def simulate_des(plant: Plant) -> Result:
                     r = _gamma(rs(i, k, "repair"), s.repair, 0.5)
                     credit("repair", k, cur, cur + r)
                     cur += r
-                if s.retest_p and rs(i, k, "retest").random() < s.retest_p:
+                low = _yield_low(rs(i, k, "yield"), s)
+                if low and w0 <= cur < w1:
+                    stats[k].low_yield += 1
+                if low or (s.retest_p and rs(i, k, "retest").random() < s.retest_p):
                     dur = _gamma(rs(i, k, "dur"), s.hours * plant.factor(b.product), s.cv)
                     if w0 <= cur < w1:
                         stats[k].reruns += 1

@@ -24,6 +24,7 @@ PAGES = [
  ("rules.html", "Queue rules: FIFO, EDD, SPT, critical ratio", "examples/rules.json", ["--seeds", "10", "--rules-sweep"]),
  ("warmup.html", "Warm-up check (Welch)", "examples/pharma_flow.json", ["--seeds", "10", "--warmup-view"]),
  ("reps.html", "How many replications", "examples/pharma_flow.json", ["--max-reps", "30", "--reps-view"]),
+ ("yield.html", "FME-022 yield threshold sweep", "examples/pharma_flow.json", ["--seeds", "3", "--yield-thresholds", "0.93,0.96", "--yield-view"]),
  ("rework.html", "Repeat probability sweep (rework)", "examples/pharma_flow.json", ["--seeds", "3", "--rework-probs", "0,0.2,0.4", "--rework-view"]),
  ("calib2.html", "Two-parameter calibration (identifiability)", "examples/pharma_flow.json", ["--seeds", "3", "--calib2-view"]),
  ("little.html", "Little's law check", "examples/pharma_flow.json", ["--seeds", "4", "--little-view"]),
