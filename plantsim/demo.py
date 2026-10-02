@@ -28,6 +28,7 @@ PAGES = [
  ("expiry.html", "FME-006 hold-time guard", "examples/pharma_flow.json", ["--seeds", "3", "--expiry-limits", "24,72", "--expiry-view"]),
  ("entry.html", "FME-024 manual entry error", "examples/pharma_flow.json", ["--seeds", "3", "--entry-probs", "0.01,0.03", "--entry-view"]),
  ("printer.html", "FME-026 label printer downtime", "examples/pharma_flow.json", ["--seeds", "3", "--printer-mttr", "1,4", "--printer-view"]),
+ ("ganttcap.html", "Finite-capacity Gantt by resource", "examples/pharma_flow.json", ["--gantt-res-view"]),
  ("qualpool.html", "FME-025 task by unqualified person (qualified pool)", "examples/pharma_flow.json", ["--seeds", "3", "--qual-view"]),
  ("authcheck.html", "FME-023 unauthorized operation (authority check)", "examples/pharma_flow.json", ["--seeds", "3", "--auth-view"]),
  ("auditfail.html", "FME-029 audit write failure (fail closed)", "examples/pharma_flow.json", ["--seeds", "3", "--audit-view"]),
