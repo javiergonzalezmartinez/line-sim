@@ -1,11 +1,40 @@
-# line-sim
+# line-sim: a digital twin of a fictitious pharma plant (synthetic, private learning project)
 
-Discrete-event simulator of a serial production line with finite buffers, random failures and blocked/starved accounting. Python standard library only.
+From a two-station line to a whole plant: discrete-event simulation of a fictitious oral-solid-dose factory (warehouse, dispensing, production, QA, packaging, shipping) that produces **canonical events**, **state machines**, **signals**, **KPIs**, **handling units and pallets**, **forklift/AGV tasks**, **interface handshakes** and **quality holds**, and shows them in one live dashboard. Python standard library plus one offline HTML/JS file. No network, no paid services.
 
-    python3 -m linesim examples/line.json --out report.html
-    python3 -m unittest discover -s tests -t .
+Everything is **synthetic**: no real plant, company or personal data. Parameters the specification leaves as TBD stay TBD; the examples use values labelled **illustrative**. The "SAP-style" events are simulated, **not a real SAP integration**.
 
-The example line is fictitious and illustrative. It does not describe any real plant.
+## Quick start
+
+    python3 -m unittest discover -s tests -t .        # Python tests
+    node --test tests/*.test.js                       # JS tests
+    python3 -m plantsim examples/dashboard_demo.json --dashboard dashboard.html   # open it in a browser, add #t=700 to jump in time
+    python3 -m plantsim examples/seed_scenario.json --events ev.jsonl --kpis kpis.html --messages msg.jsonl --handling hu.jsonl --transport tt.jsonl --quality q.jsonl
+
+## Gallery (screenshots of the real output, illustrative numbers)
+
+| | |
+|---|---|
+| ![Live dashboard](docs/img/m19_dashboard.png) **Live dashboard**: animated plant + twin layer on one clock | ![Canonical event log](docs/img/m11_events.png) **Canonical event log** of one lot |
+| ![State machines](docs/img/m12_fsm.png) **State machines** with state hashes | ![Signals](docs/img/m13_signals.png) **Machine signals** timeline |
+| ![KPIs](docs/img/m14_kpis.png) **KPIs from the event log** | ![Handshakes](docs/img/m15_handshakes.png) **Interface handshakes**: retries, timeouts |
+| ![Handling units](docs/img/m16_handling.png) **Handling units and pallets** | ![Fleet](docs/img/m17_fleet.png) **Forklift/AGV fleet** sizing |
+| ![Quality](docs/img/m18_quality.png) **Quality holds and rejections** | ![Material](docs/img/m10_material.png) **Material shortages** |
+
+## Milestones
+
+M1-M6 line simulator, plant model, signal layer, finite buffers and blocking. M7 buffer size 0. M8 capacity on wait stages. M9 shifts and breaks. M10 material shortages. M11 canonical events and schema validator. M12 8 state machines. M13 machine signals. M14 KPIs. M15 interface handshakes and a seed scenario. M16 handling units and pallets. M17 forklift/AGV transport. M18 quality status. M19 live dashboard. Each one has tests and a section below.
+
+## What is real, illustrative, or not modelled
+
+| | |
+|---|---|
+| Real (computed by the code) | the simulation, every event, state change, hash, KPI and count; the tests that check them |
+| Illustrative (invented, labelled) | every duration, rate, capacity-of-vehicles, failure probability and name in the examples |
+| TBD in the specification, left TBD | simulation parameters; the defaults then invent nothing (ideal handshake, no extra holds, no shipment) |
+| Not modelled (listed in the coverage table below) | 41 of 46 signals, 22 of 30 failure modes, 12 of 26 KPIs, expiry, retests, travel to pick-up, charging |
+
+Rules of the project: private repository, fictitious data only, no personal or employer data, no paid services, nothing published without the owner's OK. Public sources used: ISA-88 / ISA-95 concepts, OPC UA, GS1 EPCIS, EU Annex 11, 21 CFR 11, and the public SAP Learning pages cited below.
 
 ## What you learn here
 Why a line runs below its slowest station: blocking and starving, failures, and what a buffer is worth. Buffer size 0 (direct hand-off, the finished part waits in its station) is modelled in linesim; the plant view still clamps to 1.
