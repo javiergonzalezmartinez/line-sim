@@ -15,6 +15,11 @@ class T(unittest.TestCase):
         self.assertLessEqual(r[0]["wrong"][0], r[1]["wrong"][0]); self.assertLessEqual(r[1]["wrong"][0], r[2]["wrong"][0])
         for x in r: self.assertAlmostEqual(x["mean"][0], x["mean_th"], delta=0.25 * x["mean_th"] + 1e-3)
         self.assertIn("ppm", render_html(r, 50, 1.0, 1.0, 3))
+    def test_weekly_gap_is_sampling_noise(self):
+        # M72: the 46.9% vs 43.2% gap at a weekly sync came from 60 pairs per seed (SD of one estimate 5.9 points), not from the model
+        p = load("examples/pharma_flow.json")
+        r = sweep(p, [168], 50, 1.0, 1.0, 2, 1500)[0]
+        self.assertAlmostEqual(r["wrong"][0], r["wrong_th"], delta=0.03)
     def test_bad(self):
         with self.assertRaises(ValueError): sweep(load("examples/pharma_flow.json"), [], 50, 1, 1)
 if __name__ == "__main__": unittest.main()
