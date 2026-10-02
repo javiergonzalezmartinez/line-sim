@@ -32,6 +32,7 @@ Everything is **synthetic**: no real plant, company or personal data. Parameters
 | ![Need](docs/img/m43_need.png) **Seeds needed** to see a difference | ![Tornado](docs/img/m44_tornado.png) **Sensitivity** (tornado) |
 | ![CONWIP](docs/img/m45_conwip.png) **CONWIP** card sweep | ![CRN](docs/img/m46_crn.png) **Same seeds or not** (common random numbers) |
 | ![PM sweep](docs/img/m47_pmsweep.png) **PM interval sweep** | ![Little](docs/img/m51_little.png) **Little's law check** |
+| ![Calib2](docs/img/m54_calib2.png) **Two-parameter calibration**: identifiability | |
 
 ## Milestones
 
@@ -312,3 +313,7 @@ Every "not clear" row of a what-if page now shows a rough planning figure: if th
 ## Synchronised random streams (M52)
 
 Follow-up of M46. `"sync_streams": true` in the config gives each (lot, stage, purpose) its own random stream, derived from the seed (event-driven engine; purposes: hold, reject, delay, shortage, process time, breakdown, repair, retest). The same lot then gets the same random numbers in scenario A and B, which is the synchronisation described at https://en.wikipedia.org/wiki/Variance_reduction (read 2 Oct 2026). `--crn-view` now shows both ways. With whatif_a vs whatif_b and 10 seeds (illustrative, noisy): repair hours correlation +0.96 (ratio of CI half-widths 0.20 against 1.18 before), setup hours 0.36, rejected lots 0.29, throughput 0.64; mean lead time does not gain (ratio 0.99, correlation -0.15). Longest queue wait is identical in A and B here (half-width 0), so it says nothing. Results with `sync_streams` differ from the same seed without it (other random numbers), so do not mix the two in one comparison. Not done: antithetic variates, streams per unit.
+
+## Two-parameter calibration: identifiability (M54)
+
+`python -m plantsim.cli examples/pharma_flow.json --calib2-view calib2.html --calib2-stages "Coating,Granulation + drying" --seeds 5` takes the config values of two stages as a hidden truth, builds a reference summary from 10 seeds, and evaluates a 7x7 grid (+-40%) of process hours for the two stages with other seeds. Loss = sum of squared relative errors of the observables; set 1 = throughput and mean lead time (as in calibrate.py), set 2 = set 1 plus the mean queue wait per lot at both stages. Idea of comparing model and system behaviour: Sargent, WSC 2011 (https://www.informs-sim.org/wsc11papers/016.pdf, read 2 Oct 2026); no real data. Result with the pharma_flow placeholders and 5 seeds (illustrative): with set 1, 10 of 49 cells are within the minimum plus twice the noise (the loss of the truth cell, a rule of this code), and the lowest cell has Granulation at 7.8 h instead of 9, so throughput and lead time alone do not pin down both values (the plant is limited by the release interval, as M44 showed). With set 2 only 1 cell is near the minimum and it is the truth. Caveats: one stage pair and one plant, few seeds; with a 2-server stage the queue wait is close to 0 and its relative error is noisy, so the Coating/Compression pair is not a good demo.

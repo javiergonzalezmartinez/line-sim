@@ -8,7 +8,7 @@ class DemoTest(unittest.TestCase):
         readme = open(os.path.join(ROOT, "README.md")).read()
         cli = open(os.path.join(ROOT, "plantsim", "cli.py")).read()
         flags = set(re.findall(r"`?python3? -m plantsim[.a-z]*[^\n`]*", readme))
-        used = set(f for l in flags for f in re.findall(r"(--[a-z][a-z-]+)", l))
+        used = set(f for l in flags for f in re.findall(r"(--[a-z][a-z0-9-]+)", l))
         self.assertTrue(used)
         for f in used:
             self.assertIn('"%s"' % f, cli, f)
