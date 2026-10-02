@@ -44,6 +44,14 @@
    "loc": "LOC-WH-BUF-001"
   },
   {
+   "name": "Move to dispensing",
+   "kind": "move",
+   "servers": 2,
+   "hours": 0.15,
+   "cv": 0.2,
+   "loc": "LOC-DISP-BUF-001"
+  },
+  {
    "name": "Dispensing (EQ-DISP-01)",
    "kind": "process",
    "servers": 1,
@@ -52,6 +60,14 @@
    "changeover": 0.5,
    "loc": "LOC-DISP-BUF-001",
    "buffer": 6
+  },
+  {
+   "name": "Move to process unit",
+   "kind": "move",
+   "servers": 2,
+   "hours": 0.15,
+   "cv": 0.2,
+   "loc": "LOC-PROC-BUF-001"
   },
   {
    "name": "Process unit (EQ-MIX-01)",
@@ -80,5 +96,11 @@
   "hu_per_pallet": 4,
   "release_delay_h": 2,
   "ship_delay_h": 12
+ },
+ "transport": {
+  "_note": "ILLUSTRATIVE placeholders (the spec has no values): 2 vehicles, 0.05 h to accept, task due 1 h after the request.",
+  "fleet_size": 2,
+  "accept_h": 0.05,
+  "due_h": 1.0
  }
 }

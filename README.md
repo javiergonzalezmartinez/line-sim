@@ -83,3 +83,11 @@ A process or move stage can have `buffer`: the maximum number of lots waiting in
 - finished pallets for lots that finish accepted: `pallet.built` (palletizing; an object event that is NOT a state change in the spec), label, quarantine, release, and load/dispatch only if `ship_delay_h` is given.
 
 Parameters (`hu_per_lot`, `hu_per_pallet`, `release_delay_h`, `ship_delay_h`) come from the `handling` key; the spec has no values, so the defaults invent nothing (1 HU per lot, no shipment) and the ones in the seed scenario are illustrative placeholders. Not modelled: incoming-material QA, partial HUs/returns, HU moves after the first one, HOLD flows (next milestones).
+
+## M17: forklift / AGV transport tasks (synthetic)
+
+`python3 -m plantsim examples/transport_stress.json --transport tt.jsonl --transport-view fleet.html` emits TRANSPORT_TASK state-machine events (queued, assigned, accepted, picked, departed, route blocked/cleared, dropped, completed) for every move stage, with a finite fleet taking tasks FIFO. KPI-004 queue wait, KPI-006 fleet utilisation and KPI-014 task on time are computed; the page sweeps 1-4 vehicles.
+
+- It is an overlay: the vehicle carries the load for the modelled move time, and a late vehicle does not delay the plant model. No travel time is invented. A task is requested when the plant model starts the move.
+- Parameters (`fleet_size`, `accept_h`, `route_block_p/h`, `due_h`) come from the `transport` key. The spec has no values: defaults mean unlimited vehicles, no blocking, and KPI-006/014 not computed. `examples/transport_stress.json` is a stress variant with illustrative values so the fleet size matters.
+- Not modelled: move.timeout and retry, cancelled tasks, travel to the pick-up point, charging, routes.

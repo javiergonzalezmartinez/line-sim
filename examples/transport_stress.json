@@ -1,0 +1,106 @@
+{
+ "_note": "Stress variant of the seed scenario for the transport demo. ILLUSTRATIVE placeholders only.",
+ "products": [
+  "MAT-000001",
+  "MAT-000002"
+ ],
+ "release_every": 2.0,
+ "horizon": 240,
+ "warmup": 0,
+ "seed": 20261002,
+ "handshake": {
+  "_note": "Illustrative values for a message-failure demo; the spec leaves these TBD.",
+  "ack_latency_h": 0.005,
+  "timeout_h": 0.1,
+  "loss_p": 0.05,
+  "nack_p": 0.02,
+  "duplicate_p": 0.02,
+  "max_retries": 2
+ },
+ "stages": [
+  {
+   "name": "Inbound receipt (LOC-WH-REC-001)",
+   "kind": "process",
+   "servers": 1,
+   "hours": 0.5,
+   "cv": 0.2,
+   "loc": "LOC-WH-REC-001",
+   "buffer": 12
+  },
+  {
+   "name": "Move to warehouse buffer",
+   "kind": "move",
+   "servers": 6,
+   "hours": 0.8,
+   "cv": 0.2,
+   "loc": "LOC-WH-BUF-001"
+  },
+  {
+   "name": "Quarantine in warehouse buffer (LOC-WH-BUF-001)",
+   "kind": "wait",
+   "hours": 10,
+   "cv": 0.3,
+   "capacity": 24,
+   "loc": "LOC-WH-BUF-001"
+  },
+  {
+   "name": "Move to dispensing",
+   "kind": "move",
+   "servers": 6,
+   "hours": 0.8,
+   "cv": 0.2,
+   "loc": "LOC-DISP-BUF-001"
+  },
+  {
+   "name": "Dispensing (EQ-DISP-01)",
+   "kind": "process",
+   "servers": 1,
+   "hours": 2.5,
+   "cv": 0.25,
+   "changeover": 0.5,
+   "loc": "LOC-DISP-BUF-001",
+   "buffer": 6
+  },
+  {
+   "name": "Move to process unit",
+   "kind": "move",
+   "servers": 6,
+   "hours": 0.8,
+   "cv": 0.2,
+   "loc": "LOC-PROC-BUF-001"
+  },
+  {
+   "name": "Process unit (EQ-MIX-01)",
+   "kind": "process",
+   "servers": 1,
+   "hours": 6,
+   "cv": 0.2,
+   "changeover": 1.0,
+   "breakdown_p": 0.03,
+   "repair": 4,
+   "loc": "LOC-PROC-BUF-001",
+   "buffer": 10
+  },
+  {
+   "name": "Packaging line (EQ-PACK-01)",
+   "kind": "process",
+   "servers": 1,
+   "hours": 4,
+   "cv": 0.2,
+   "loc": "AREA-PACK-01"
+  }
+ ],
+ "handling": {
+  "_note": "ILLUSTRATIVE placeholders (the spec has no values for these): 6 input HUs per lot, 4 per pallet, 2 h pallet release, 12 h to ship.",
+  "hu_per_lot": 6,
+  "hu_per_pallet": 4,
+  "release_delay_h": 2,
+  "ship_delay_h": 12
+ },
+ "transport": {
+  "_note": "STRESS demo, ILLUSTRATIVE: moves are long and frequent so that the fleet size matters.",
+  "fleet_size": 2,
+  "accept_h": 0.05,
+  "due_h": 1.0
+ }
+}
