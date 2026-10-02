@@ -10,7 +10,7 @@ for each metric, A and B are run with the same seeds (what `--whatif` does) and,
 Shown: the correlation between A and B over the seeds, and the half-width of the 95% CI of B-A in both ways (same seeds: paired t interval;
 other seeds: Welch interval, degrees of freedom by Welch-Satterthwaite, rounded). Fewer is better; ratio < 1 means the same seeds helped.
 With n seeds both half-widths are themselves noisy; they are an estimate for this config pair only.
-Not done: synchronised streams per purpose (would need one stream per stage and event type).
+Since M52 the config key `sync_streams: true` gives every (lot, stage, purpose) its own stream derived from the seed (event-driven engine), which is the synchronisation described there; the page then shows both: the single shared stream and the synchronised streams.
 """
 from __future__ import annotations
 
@@ -59,14 +59,30 @@ def check(a, b, n: int = 10) -> Dict:
     return {"n": n, "metrics": rows}
 
 
-def render_html(c: Dict, title: str = "Same seeds or not? (synthetic)") -> str:
+def render_html(c: Dict, c2: Dict = None, title: str = "Same seeds or not? (synthetic)") -> str:
     body = ""
+    def cell(v):
+        if v is None or v["ratio"] is None:
+            return "-", "-", "#868e96", 0
+        col = "#00857c" if v["ratio"] < 0.9 else ("#c0392b" if v["ratio"] > 1.1 else "#868e96")
+        rho_s = "-" if v["rho"] is None else f"{v['rho']:+.2f}"
+        return rho_s, f"{v['ratio']:.2f}", col, min(v["ratio"], 2.0) * 100
     for k, v in c["metrics"].items():
+        if c2 is not None:
+            r1, q1, c1_, w1 = cell(v); r2, q2, c2_, w2 = cell(c2["metrics"].get(k))
+            b = lambda w, col: f'<svg width=160 height=12><rect width=140 height=12 fill="#eef1f5"/><rect width="{w * 0.7:.0f}" height=12 fill="{col}" opacity=.85/><line x1=70 x2=70 y1=0 y2=12 stroke="#222"/></svg>'
+            body += f"<tr><td>{H.escape(k)}</td><td>{r1}</td><td>{b(w1, c1_)} <b>{q1}</b></td><td>{r2}</td><td>{b(w2, c2_)} <b>{q2}</b></td></tr>"
+            continue
         rho = "-" if v["rho"] is None else f"{v['rho']:+.2f}"
         ratio = "-" if v["ratio"] is None else f"{v['ratio']:.2f}"
         col = "#868e96" if v["ratio"] is None else ("#00857c" if v["ratio"] < 0.9 else ("#c0392b" if v["ratio"] > 1.1 else "#868e96"))
         w = 0 if v["ratio"] is None else min(v["ratio"], 2.0) * 100
         bar = f'<svg width=220 height=14><rect width=200 height=14 fill="#eef1f5"/><rect width="{w:.0f}" height=14 fill="{col}" opacity=.85/><line x1=100 x2=100 y1=0 y2=14 stroke="#222"/></svg>'
         body += f"<tr><td>{H.escape(k)}</td><td>{rho}</td><td>{v['paired']:.3f}</td><td>{v['indep']:.3f}</td><td>{bar} <b>{ratio}</b></td></tr>"
-    return f"""<!doctype html><html><head><meta charset=utf-8><title>{H.escape(title)}</title><style>body{{font:13px system-ui,sans-serif;margin:16px;max-width:1000px}}.n{{background:#fff4d6;border-left:4px solid #c98a00;padding:6px 10px;margin:8px 0}}table{{border-collapse:collapse;width:100%}}th{{background:#0b1226;color:#fff;text-align:left;padding:5px 8px}}td{{padding:4px 8px;border-bottom:1px solid #dde3ea}}</style></head><body><h2>{H.escape(title)}</h2><div class=n>Synthetic and illustrative. Common random numbers idea as read at en.wikipedia.org/wiki/Variance_reduction (2 Oct 2026): the same random numbers in both scenarios make the difference less noisy if A and B are positively correlated, and can make it worse if negatively. This simulator has ONE stream per run, so the draws only stay aligned until the scenarios diverge; the benefit is measured here, not assumed. {c['n']} seeds. Column "same seeds" = half-width of the 95% CI of B-A with the same seeds (paired); "other seeds" = same with B on independent seeds (Welch). Ratio below 1 (green) = same seeds helped; the black line marks 1. Half-widths come from few runs and are noisy. Synchronised streams per stage and event type are not implemented.</div>
-<table><tr><th>Metric</th><th>Correlation A-B</th><th>CI half-width, same seeds</th><th>CI half-width, other seeds</th><th>Ratio same/other</th></tr>{body}</table></body></html>"""
+    HEAD2 = ""
+    NOTE2 = "Synchronised streams (config key sync_streams, M52) are shown in the right-hand columns." if c2 is not None else "Synchronised streams: set sync_streams in the config (M52)."
+    if c2 is not None:
+        HEAD2 = "<p><b>Two ways of using the seeds.</b> Left: one shared random stream per run (draws drift apart once the scenarios diverge). Right: <code>sync_streams</code>, one stream per lot, stage and purpose, so the same lot gets the same random numbers in A and B. Ratio = half-width with the same seeds / half-width with other seeds (below 1 = helps).</p>"
+    TABLE_HEAD = "<tr><th>Metric</th><th>rho, shared stream</th><th>ratio, shared stream</th><th>rho, synchronised</th><th>ratio, synchronised</th></tr>" if c2 is not None else None
+    return f"""<!doctype html><html><head><meta charset=utf-8><title>{H.escape(title)}</title><style>body{{font:13px system-ui,sans-serif;margin:16px;max-width:1000px}}.n{{background:#fff4d6;border-left:4px solid #c98a00;padding:6px 10px;margin:8px 0}}table{{border-collapse:collapse;width:100%}}th{{background:#0b1226;color:#fff;text-align:left;padding:5px 8px}}td{{padding:4px 8px;border-bottom:1px solid #dde3ea}}</style></head><body><h2>{H.escape(title)}</h2><div class=n>Synthetic and illustrative. Common random numbers idea as read at en.wikipedia.org/wiki/Variance_reduction (2 Oct 2026): the same random numbers in both scenarios make the difference less noisy if A and B are positively correlated, and can make it worse if negatively. This simulator has ONE stream per run, so the draws only stay aligned until the scenarios diverge; the benefit is measured here, not assumed. {c['n']} seeds. Column "same seeds" = half-width of the 95% CI of B-A with the same seeds (paired); "other seeds" = same with B on independent seeds (Welch). Ratio below 1 (green) = same seeds helped; the black line marks 1. Half-widths come from few runs and are noisy. {NOTE2}</div>
+{HEAD2}<table>{TABLE_HEAD or "<tr><th>Metric</th><th>Correlation A-B</th><th>CI half-width, same seeds</th><th>CI half-width, other seeds</th><th>Ratio same/other</th></tr>"}{body}</table></body></html>"""

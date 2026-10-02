@@ -57,6 +57,7 @@ class Plant:
     handling_min: float = 6.0
     dispatch: str = "fifo"            # queue rule of the event-driven engine: "fifo" or "same_product_first" (avoid changeovers)
     hours_factor: object = None       # {product: factor} multiplies the process time of process stages in the event-driven engine (placeholder values; lets SPT and CR differ from FIFO/EDD)
+    sync_streams: bool = False        # one random stream per (lot, stage, purpose) so scenarios share draws (event-driven engine only)
     conwip: Optional[int] = None      # release control: at most this many lots in the plant at once; a new lot is admitted when one finishes (event-driven engine only)
     due_h: object = None              # due date = release + due_h (hours); a number for all products or {product: hours}. Placeholder values only
     dispatch_max_wait_h: Optional[float] = None   # same_product_first: a lot that has waited longer than this goes first (guard against starvation)
@@ -267,7 +268,7 @@ def _next_wave(t: float, waves: List[float]) -> float:
 
 
 def simulate(plant: Plant) -> Result:
-    if plant.dispatch in ("edd", "spt", "cr") or plant.hours_factor is not None or plant.conwip is not None or any(s.buffer is not None or s.pm_every_h for s in plant.stages):
+    if plant.dispatch in ("edd", "spt", "cr") or plant.hours_factor is not None or plant.conwip is not None or plant.sync_streams or any(s.buffer is not None or s.pm_every_h for s in plant.stages):
         return simulate_des(plant)
     return simulate_fifo(plant)
 
@@ -384,6 +385,19 @@ def simulate_des(plant: Plant) -> Result:
     blocked lots are released first-come first-served. Delay-only stages (wait without `capacity`, wave, hold) have no capacity.
     Same stage semantics as simulate_fifo (calendars, changeovers, breakdowns, retests, holds, shared pools)."""
     rng = random.Random(plant.seed)
+    streams: Dict[tuple, random.Random] = {}
+
+    def rs(i, k, tag):
+        """Random stream for one purpose. With `sync_streams` each (lot, stage, purpose) has its own stream derived from the seed, so two scenarios
+        that differ in something else still draw the same numbers for the same lot, stage and purpose (common random numbers)."""
+        if not plant.sync_streams:
+            return rng
+        key = (i, k, tag)
+        r = streams.get(key)
+        if r is None:
+            r = streams[key] = random.Random(f"{plant.seed}|{i}|{k}|{tag}")
+        return r
+
     S, n = plant.stages, len(plant.stages)
     keys = [s.pool or str(k) for k, s in enumerate(S)]
     units: Dict[str, list] = {}
@@ -435,13 +449,13 @@ def simulate_des(plant: Plant) -> Result:
             dispatch(keys[k], now)
             return
         if s.kind == "hold":
-            if rng.random() >= s.p:
+            if rs(i, k, "hold_p").random() >= s.p:
                 rec[2] = rec[3] = now
                 push(now, "leave", i, k, None)
                 return
             start = _next_open(now, s)
-            end = start + _gamma(rng, s.hours, s.cv)
-            if rng.random() < s.reject_p:
+            end = start + _gamma(rs(i, k, "hold_h"), s.hours, s.cv)
+            if rs(i, k, "reject").random() < s.reject_p:
                 b.rejected = True
             b.waits[s.name] = start - now
             rec[2], rec[3] = start, end
@@ -457,7 +471,7 @@ def simulate_des(plant: Plant) -> Result:
             b.waits[s.name] = end - now
             rec[3] = end
         else:
-            end = now + _gamma(rng, s.hours, s.cv)
+            end = now + _gamma(rs(i, k, "delay"), s.hours, s.cv)
             b.waits[s.name] = 0.0
             rec[3] = end
         if w0 <= now < w1:
@@ -514,24 +528,24 @@ def simulate_des(plant: Plant) -> Result:
                 credit("setup", k, cur, cur + s.changeover)
                 cur += s.changeover
             u["last"] = b.product
-            if s.shortage_p and rng.random() < s.shortage_p:
-                m = _gamma(rng, s.shortage_hours, 0.5)
+            if s.shortage_p and rs(i, k, "shortage").random() < s.shortage_p:
+                m = _gamma(rs(i, k, "shortage_h"), s.shortage_hours, 0.5)
                 if w0 <= cur < w1:
                     stats[k].short_lots += 1
                     stats[k].short_hours += m
                 cur += m
             rec[2] = cur
-            dur = _gamma(rng, s.hours * plant.factor(b.product), s.cv)
+            dur = _gamma(rs(i, k, "dur"), s.hours * plant.factor(b.product), s.cv)
             while True:
                 credit("busy", k, cur, cur + dur)
                 cur += dur
                 u["since_pm"] = u.get("since_pm", 0.0) + dur
-                if s.breakdown_p and rng.random() < min(1.0, s.breakdown_p * (1.0 + s.wear_per_100h * u["since_pm"] / 100.0)):
-                    r = _gamma(rng, s.repair, 0.5)
+                if s.breakdown_p and rs(i, k, "breakdown").random() < min(1.0, s.breakdown_p * (1.0 + s.wear_per_100h * u["since_pm"] / 100.0)):
+                    r = _gamma(rs(i, k, "repair"), s.repair, 0.5)
                     credit("repair", k, cur, cur + r)
                     cur += r
-                if s.retest_p and rng.random() < s.retest_p:
-                    dur = _gamma(rng, s.hours * plant.factor(b.product), s.cv)
+                if s.retest_p and rs(i, k, "retest").random() < s.retest_p:
+                    dur = _gamma(rs(i, k, "dur"), s.hours * plant.factor(b.product), s.cv)
                     continue
                 break
             rec[3] = rec[4] = cur
