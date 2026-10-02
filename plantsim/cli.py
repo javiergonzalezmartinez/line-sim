@@ -13,7 +13,7 @@ def load(path):
     return Plant(st, d["products"], d["release_every"], d.get("horizon", 2016), d.get("warmup", 336), d.get("seed", 1), d.get("layout"), d.get("m_per_px", 0.0), d.get("speed_kmh", 6.0), d.get("handling_min", 6.0))
 
 def main(argv=None):
-    ap = argparse.ArgumentParser(prog="plantsim"); ap.add_argument("config"); ap.add_argument("--view", help="write animated HTML view"); ap.add_argument("--events", help="write the canonical event log (JSONL)"); ap.add_argument("--telemetry", help="write machine telemetry sensor events (JSONL)"); ap.add_argument("--kpis", help="write KPIs computed from the event log (HTML)"); ap.add_argument("--handling", help="write handling-unit and pallet events (JSONL); parameters from the config key \"handling\""); ap.add_argument("--handling-view", help="write handling-unit HTML page"); ap.add_argument("--transport", help="write transport task events (JSONL); config key \"transport\""); ap.add_argument("--transport-view", help="write fleet HTML page"); ap.add_argument("--quality", help="write quality status events (JSONL); config key \"quality\""); ap.add_argument("--quality-view", help="write quality HTML page"); ap.add_argument("--messages", help="write interface handshake message events (JSONL); parameters from the config key \"handshake\"")
+    ap = argparse.ArgumentParser(prog="plantsim"); ap.add_argument("config"); ap.add_argument("--view", help="write animated HTML view"); ap.add_argument("--events", help="write the canonical event log (JSONL)"); ap.add_argument("--telemetry", help="write machine telemetry sensor events (JSONL)"); ap.add_argument("--kpis", help="write KPIs computed from the event log (HTML)"); ap.add_argument("--handling", help="write handling-unit and pallet events (JSONL); parameters from the config key \"handling\""); ap.add_argument("--handling-view", help="write handling-unit HTML page"); ap.add_argument("--transport", help="write transport task events (JSONL); config key \"transport\""); ap.add_argument("--transport-view", help="write fleet HTML page"); ap.add_argument("--quality", help="write quality status events (JSONL); config key \"quality\""); ap.add_argument("--quality-view", help="write quality HTML page"); ap.add_argument("--dashboard", help="write the live dashboard (animated plant + digital-twin panel, one HTML file)"); ap.add_argument("--messages", help="write interface handshake message events (JSONL); parameters from the config key \"handshake\"")
     a = ap.parse_args(argv)
     p = load(a.config); r = simulate(p)
     print(f"throughput {r.throughput_per_week:.2f} batches/week, mean lead time {r.mean_lead_time_days:.1f} days, busiest: {r.bottleneck}, rejected lots in window: {r.rejected}")
@@ -67,6 +67,10 @@ def main(argv=None):
         if a.quality_view:
             open(a.quality_view, "w", encoding="utf-8").write(qr(qe, hu))
             print("quality page written to", a.quality_view)
+    if a.dashboard:
+        from .dashboard import build
+        open(a.dashboard, "w", encoding="utf-8").write(build(p, json.load(open(a.config, encoding="utf-8"))))
+        print("dashboard written to", a.dashboard)
     if a.messages:
         from .events import write_jsonl
         from .handshakes import messages, message_kpis

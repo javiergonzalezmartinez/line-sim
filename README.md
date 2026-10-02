@@ -105,3 +105,10 @@ Parameters (`hu_per_lot`, `hu_per_pallet`, `release_delay_h`, `ship_delay_h`) co
 | Failure modes (30) | modelled: FME-005 (hold after release, `hold_p`), FME-008 (destination full, via finite buffers), FME-009/013 (ACK lost/timeout), FME-010 (route blocked, `route_block_p`), FME-011 (duplicate), FME-014 (rejection), FME-016 (breakdown). NOT modelled: the other 22 (identity, stock mismatch, expiry, scale, calibration, excursions, human errors, printing, cold chain, audit/backup) |
 | KPIs (26) | computed: 001-006 (006 also for the vehicle fleet), 011 (lot level), 014 (only with `due_h`), 015-018, 023, 026. Not computed (no basis in the sim): 007-010 blocking/starvation/setup/downtime fractions, 012-013 inventory and FEFO, 019-022 data freshness, clock skew, audit and signatures, 024-025 excursions and rework |
 | Parameters marked TBD | stay TBD: the examples use labelled illustrative values |
+
+## M19: live dashboard (one HTML file)
+
+`python3 -m plantsim examples/dashboard_demo.json --dashboard dashboard.html` writes a single self-contained page (no network): the animated plant (forklifts, lots, buffers, live parameter panel, charts, signal stream) plus a **digital twin layer** synchronised with the animation clock. The layer shows, for the current time, cumulative counts (canonical events, lots dispatched/rejected, active quality holds, transport tasks done, messages reconciled and retried, pallets in quarantine and shipped) and the latest events from the transport, message, quality, pallet and plant streams, with their state changes. Open it with `#t=700` to jump to a time.
+
+- The twin layer is precomputed in Python for the loaded config (same seed and plant model). If you change a parameter in the animation panel, the animation re-runs but the layer does not, and the page says so. Counts run from hour 0 (include warm-up), so they differ from the steady-state cards.
+- `examples/dashboard_demo.json` = the fictitious pharma plant plus illustrative `handshake`, `handling`, `transport` and `quality` parameters (the spec has no values).
