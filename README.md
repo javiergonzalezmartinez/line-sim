@@ -21,10 +21,11 @@ Everything is **synthetic**: no real plant, company or personal data. Parameters
 | ![Handling units](docs/img/m16_handling.png) **Handling units and pallets** | ![Fleet](docs/img/m17_fleet.png) **Forklift/AGV fleet** sizing |
 | ![Quality](docs/img/m18_quality.png) **Quality holds and rejections** | ![Process value](docs/img/m21_process.png) **Process value with deadband** |
 | ![Material](docs/img/m10_material.png) **Material shortages** | ![Faults](docs/img/m22_faults.png) **Injected sensor faults and excursions** |
+| ![What-if](docs/img/m23_whatif.png) **What-if A vs B** with 95% confidence intervals | |
 
 ## Milestones
 
-M1-M6 line simulator, plant model, signal layer, finite buffers and blocking. M7 buffer size 0. M8 capacity on wait stages. M9 shifts and breaks. M10 material shortages. M11 canonical events and schema validator. M12 8 state machines. M13 machine signals. M14 KPIs. M15 interface handshakes and a seed scenario. M16 handling units and pallets. M17 forklift/AGV transport. M18 quality status. M19 live dashboard. M21 analog process values. M22 fault injection (drift, step, stochastic excursion, calibration overdue). Each one has tests and a section below.
+M1-M6 line simulator, plant model, signal layer, finite buffers and blocking. M7 buffer size 0. M8 capacity on wait stages. M9 shifts and breaks. M10 material shortages. M11 canonical events and schema validator. M12 8 state machines. M13 machine signals. M14 KPIs. M15 interface handshakes and a seed scenario. M16 handling units and pallets. M17 forklift/AGV transport. M18 quality status. M19 live dashboard. M21 analog process values. M22 fault injection (drift, step, stochastic excursion, calibration overdue). M23 what-if comparator with confidence intervals. Each one has tests and a section below.
 
 ## What is real, illustrative, or not modelled
 
@@ -33,7 +34,7 @@ M1-M6 line simulator, plant model, signal layer, finite buffers and blocking. M7
 | Real (computed by the code) | the simulation, every event, state change, hash, KPI and count; the tests that check them |
 | Illustrative (invented, labelled) | every duration, rate, capacity-of-vehicles, failure probability and name in the examples |
 | TBD in the specification, left TBD | simulation parameters; the defaults then invent nothing (ideal handshake, no extra holds, no shipment) |
-| Not modelled (listed in the coverage table below) | 41 of 46 signals, 18 of 30 failure modes (4 more with the M22 config), 12 of 26 KPIs, expiry, retests, travel to pick-up, charging |
+| Not modelled (listed in the coverage table below) | 41 of 46 signals, 22 of 30 failure modes (18 once the M22 faults are configured), 12 of 26 KPIs, expiry, retests, travel to pick-up, charging |
 
 Rules of the project: private repository, fictitious data only, no personal or employer data, no paid services, nothing published without the owner's OK. Public sources used: ISA-88 / ISA-95 concepts, OPC UA, GS1 EPCIS, EU Annex 11, 21 CFR 11, and the public SAP Learning pages cited below.
 
@@ -166,3 +167,13 @@ A limit evaluator opens and closes `excursion.opened` / `excursion.closed` event
 
 - Sources: injection types and detection from the provided spec (`spec/failures.json`); UNCERTAIN as "the operation was partially successful and results might not be suitable for some purposes" in OPC 10000-4 section 7.38.1 (https://reference.opcfoundation.org/specs/OPC-10000-4/7.38.1, read 2 Oct 2026); absolute deadband as in M21.
 - All rates, deltas, dates and limits come from the config and are illustrative. Not modelled: FME-018 scale unstable (needs a weighing capture flow), FME-026 printer unavailable, the safe responses (holding the batch, quarantining material, removing the instrument from eligible resources), detection by analytics, drift correction.
+
+## M23: what-if comparator with confidence intervals (synthetic)
+
+`python -m plantsim.cli examples/whatif_a.json --whatif examples/whatif_b.json --seeds 20 --whatif-view whatif.html`
+
+Runs scenario A (the main config) and scenario B (another config file) over N replications with consecutive seeds. For each metric it prints the mean and 95% confidence interval of each scenario, and the paired difference B - A per seed with its own interval. A difference is called "clear" only when that interval does not contain 0. Intervals use the Student t distribution (`mean +/- t * s / sqrt(N)`), following the NIST/SEMATECH e-Handbook, sections 7.2.2.1 and 7.3.1.1 (read 2 Oct 2026). The t quantile is computed in the code and tested against the published values for 1, 10 and 30 degrees of freedom.
+
+The example pair is illustrative: B is A with a second coating unit. In one run of 20 seeds, throughput and lead time differ clearly, rejected lots do not. The numbers depend on the placeholder parameters and mean nothing about a real plant.
+
+Not modelled: common random numbers across different structures (the paired difference is valid but the variance reduction is not guaranteed), correction for many comparisons, stopping rules. Busiest-stage utilisation saturates at 100% in this example, so it carries no information there.
