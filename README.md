@@ -257,4 +257,8 @@ The wear rule is this code's own assumption, not taken from any source, and all 
 
 ## One-command offline demo (M34)
 
-`python3 -m plantsim.demo demo_out` runs the CLI on the bundled synthetic examples and writes all 17 HTML pages plus `demo_out/index.html` (no network, no dependencies). Fictitious plant; example values are illustrative placeholders. `tests/test_demo.py` checks that every flag used in the README exists in `cli.py` and that all pages are produced.
+`python3 -m plantsim.demo demo_out` runs the CLI on the bundled synthetic examples and writes all 18 HTML pages plus `demo_out/index.html` (no network, no dependencies). Fictitious plant; example values are illustrative placeholders. `tests/test_demo.py` checks that every flag used in the README exists in `cli.py` and that all pages are produced.
+
+## Pareto of lost hours (M35)
+
+`python -m plantsim.cli examples/pm_b.json --pareto-view pareto.html` ranks loss causes per stage (repair, setup, PM, blocked, material wait) in resource-hours, with the cumulative line and an 80% marker. Concept as read at https://pmc.ncbi.nlm.nih.gov/articles/PMC10228985/ (2 Oct 2026). Hours, not money; queue waiting and idle time are not counted as losses. Example values are illustrative placeholders: in this example setup dominates only because of the placeholder changeover times.

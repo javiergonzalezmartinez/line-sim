@@ -20,6 +20,7 @@ PAGES = [
  ("calibrate.html", "Calibration vs synthetic truth", "examples/whatif_a.json", ["--calibrate-truth", "10", "--calibrate-view"]),
  ("dispatch.html", "Dispatch rule: FIFO vs same-product", "examples/dispatch_fifo.json", ["--whatif", "examples/dispatch_same_product.json", "--seeds", "20", "--whatif-view"]),
  ("guard.html", "Dispatch wait-guard sweep", "examples/dispatch_same_product.json", ["--dispatch-sweep"]),
+ ("pareto.html", "Pareto of lost hours", "examples/pm_b.json", ["--pareto-view"]),
  ("pm.html", "Preventive maintenance what-if", "examples/pm_a.json", ["--whatif", "examples/pm_b.json", "--seeds", "20", "--whatif-view"]),
 ]
 EXTRA = {"guard.html": ["--guards", "24,72,168", "--seeds", "10"]}
