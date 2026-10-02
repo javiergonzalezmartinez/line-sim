@@ -53,12 +53,15 @@ class Plant:
     speed_kmh: float = 6.0
     handling_min: float = 6.0
     dispatch: str = "fifo"            # queue rule of the event-driven engine: "fifo" or "same_product_first" (avoid changeovers)
+    dispatch_max_wait_h: Optional[float] = None   # same_product_first: a lot that has waited longer than this goes first (guard against starvation)
 
     def __post_init__(self):
         if not self.stages or not self.products:
             raise ValueError("need stages and products")
         if self.dispatch not in ("fifo", "same_product_first"):
             raise ValueError("dispatch must be fifo or same_product_first")
+        if self.dispatch_max_wait_h is not None and self.dispatch_max_wait_h <= 0:
+            raise ValueError("dispatch_max_wait_h must be > 0")
         if self.release_every <= 0:
             raise ValueError("release_every must be > 0")
         for s in self.stages:
@@ -455,7 +458,9 @@ def simulate_des(plant: Plant) -> Result:
             _, k = min(cand)
             u = min(idle, key=lambda x: x["free_at"])        # the resource idle the longest (same choice as the FIFO engine)
             pos = 0
-            if plant.dispatch == "same_product_first" and u["last"] is not None and S[k].changeover > 0:
+            old = queue[k][0][0]
+            if plant.dispatch == "same_product_first" and u["last"] is not None and S[k].changeover > 0 \
+                    and not (plant.dispatch_max_wait_h is not None and now - old > plant.dispatch_max_wait_h):
                 for j, (_t, bi) in enumerate(queue[k]):      # oldest waiting lot of the product this unit last made
                     if batches[bi].product == u["last"]:
                         pos = j

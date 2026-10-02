@@ -34,3 +34,26 @@ class T(unittest.TestCase):
         st = [dataclasses.replace(s, changeover=0.0) for s in A.stages]
         a = dataclasses.replace(A, stages=st); b = dataclasses.replace(B, stages=st)
         self.assertEqual(sig(simulate(a)), sig(simulate(b)))
+
+
+class G(unittest.TestCase):
+    def test_huge_guard_equals_no_guard(self):
+        a = simulate(B); b = simulate(dataclasses.replace(B, dispatch_max_wait_h=1e9))
+        self.assertEqual(sig(a), sig(b))
+
+    def test_tiny_guard_matches_fifo(self):
+        a = simulate(A); b = simulate(dataclasses.replace(B, dispatch_max_wait_h=1e-9))
+        self.assertEqual(sig(a), sig(b))
+
+    def test_bad_guard_rejected(self):
+        with self.assertRaises(ValueError):
+            dataclasses.replace(B, dispatch_max_wait_h=0)
+
+    def test_guard_is_monotone_in_setup_hours_roughly(self):
+        s = lambda g: sum(x.setup for x in simulate(dataclasses.replace(B, dispatch_max_wait_h=g)).stats)
+        self.assertLess(s(None), s(24.0))
+
+    def test_sweep_rows(self):
+        from plantsim.dispatchsweep import sweep
+        rows = sweep(B, [None, 72.0], n=3)
+        self.assertEqual([r["name"] for r in rows], ["FIFO", "no guard", "guard 72 h"])
