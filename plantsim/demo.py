@@ -27,6 +27,7 @@ PAGES = [
  ("yield.html", "FME-022 yield threshold sweep", "examples/pharma_flow.json", ["--seeds", "3", "--yield-thresholds", "0.93,0.96", "--yield-view"]),
  ("expiry.html", "FME-006 hold-time guard", "examples/pharma_flow.json", ["--seeds", "3", "--expiry-limits", "24,72", "--expiry-view"]),
  ("entry.html", "FME-024 manual entry error", "examples/pharma_flow.json", ["--seeds", "3", "--entry-probs", "0.01,0.03", "--entry-view"]),
+ ("printer.html", "FME-026 label printer downtime", "examples/pharma_flow.json", ["--seeds", "3", "--printer-mttr", "1,4", "--printer-view"]),
  ("rework.html", "Repeat probability sweep (rework)", "examples/pharma_flow.json", ["--seeds", "3", "--rework-probs", "0,0.2,0.4", "--rework-view"]),
  ("calib2.html", "Two-parameter calibration (identifiability)", "examples/pharma_flow.json", ["--seeds", "3", "--calib2-view"]),
  ("little.html", "Little's law check", "examples/pharma_flow.json", ["--seeds", "4", "--little-view"]),
