@@ -1,0 +1,77 @@
+{
+ "_note": "Scenario built from the synthetic seed of the digital-twin spec (areas, locations with capacity, equipment). All TIMES below are ILLUSTRATIVE placeholders: the spec leaves process and transport times as TBD (to be calibrated with real histories). Lots stand in for handling units (1 lot = 1 HU). Synthetic, not real plant data.",
+ "products": [
+  "MAT-000001",
+  "MAT-000002"
+ ],
+ "release_every": 8,
+ "horizon": 720,
+ "warmup": 72,
+ "seed": 20261002,
+ "handshake": {
+  "_note": "Illustrative values for a message-failure demo; the spec leaves these TBD.",
+  "ack_latency_h": 0.005,
+  "timeout_h": 0.1,
+  "loss_p": 0.05,
+  "nack_p": 0.02,
+  "duplicate_p": 0.02,
+  "max_retries": 2
+ },
+ "stages": [
+  {
+   "name": "Inbound receipt (LOC-WH-REC-001)",
+   "kind": "process",
+   "servers": 1,
+   "hours": 0.5,
+   "cv": 0.2,
+   "loc": "LOC-WH-REC-001",
+   "buffer": 12
+  },
+  {
+   "name": "Move to warehouse buffer",
+   "kind": "move",
+   "servers": 1,
+   "hours": 0.15,
+   "cv": 0.2,
+   "loc": "LOC-WH-BUF-001"
+  },
+  {
+   "name": "Quarantine in warehouse buffer (LOC-WH-BUF-001)",
+   "kind": "wait",
+   "hours": 10,
+   "cv": 0.3,
+   "capacity": 24,
+   "loc": "LOC-WH-BUF-001"
+  },
+  {
+   "name": "Dispensing (EQ-DISP-01)",
+   "kind": "process",
+   "servers": 1,
+   "hours": 2.5,
+   "cv": 0.25,
+   "changeover": 0.5,
+   "loc": "LOC-DISP-BUF-001",
+   "buffer": 6
+  },
+  {
+   "name": "Process unit (EQ-MIX-01)",
+   "kind": "process",
+   "servers": 1,
+   "hours": 6,
+   "cv": 0.2,
+   "changeover": 1.0,
+   "breakdown_p": 0.03,
+   "repair": 4,
+   "loc": "LOC-PROC-BUF-001",
+   "buffer": 10
+  },
+  {
+   "name": "Packaging line (EQ-PACK-01)",
+   "kind": "process",
+   "servers": 1,
+   "hours": 4,
+   "cv": 0.2,
+   "loc": "AREA-PACK-01"
+  }
+ ]
+}
