@@ -26,6 +26,12 @@ Everything is **synthetic**: no real plant, company or personal data. Parameters
 | ![OEE](docs/img/m28_oee.png) **OEE decomposition** and loss waterfall | ![Bottleneck](docs/img/m29_bottleneck.png) **Shifting bottleneck** (active period method) |
 | ![Calibration](docs/img/m30_calibration.png) **Calibration** against a synthetic reference | ![Dispatch](docs/img/m31_dispatch.png) **Dispatch rule what-if**: FIFO vs same product first |
 | ![Guard](docs/img/m32_guard.png) **Starvation guard** sweep | ![PM](docs/img/m33_pm.png) **Preventive maintenance** what-if |
+| ![Demo](docs/img/m34_demo.png) **Demo index**: every page in one run | ![Pareto](docs/img/m35_pareto.png) **Pareto** of lost resource-hours |
+| ![Due dates](docs/img/m37_due.png) **Due dates**: tardiness under FIFO vs EDD | ![Rules](docs/img/m38_rules.png) **Dispatch rules** FIFO/EDD/SPT/CR |
+| ![Welch](docs/img/m41_welch.png) **Warm-up check** (Welch) | ![Replications](docs/img/m42_reps.png) **How many replications** |
+| ![Need](docs/img/m43_need.png) **Seeds needed** to see a difference | ![Tornado](docs/img/m44_tornado.png) **Sensitivity** (tornado) |
+| ![CONWIP](docs/img/m45_conwip.png) **CONWIP** card sweep | ![CRN](docs/img/m46_crn.png) **Same seeds or not** (common random numbers) |
+| ![PM sweep](docs/img/m47_pmsweep.png) **PM interval sweep** | |
 
 ## Milestones
 
