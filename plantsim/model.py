@@ -57,6 +57,7 @@ class Plant:
     handling_min: float = 6.0
     dispatch: str = "fifo"            # queue rule of the event-driven engine: "fifo" or "same_product_first" (avoid changeovers)
     hours_factor: object = None       # {product: factor} multiplies the process time of process stages in the event-driven engine (placeholder values; lets SPT and CR differ from FIFO/EDD)
+    conwip: Optional[int] = None      # release control: at most this many lots in the plant at once; a new lot is admitted when one finishes (event-driven engine only)
     due_h: object = None              # due date = release + due_h (hours); a number for all products or {product: hours}. Placeholder values only
     dispatch_max_wait_h: Optional[float] = None   # same_product_first: a lot that has waited longer than this goes first (guard against starvation)
 
@@ -67,6 +68,8 @@ class Plant:
             raise ValueError("dispatch must be fifo, same_product_first, edd, spt or cr")
         if self.dispatch in ("edd", "cr") and self.due_h is None:
             raise ValueError("dispatch edd and cr need due_h")
+        if self.conwip is not None and self.conwip < 1:
+            raise ValueError("conwip must be >= 1")
         if self.hours_factor is not None and (any(p not in self.hours_factor for p in self.products) or any(v <= 0 for v in self.hours_factor.values())):
             raise ValueError("hours_factor must be > 0 and cover every product")
         if self.due_h is not None:
@@ -138,6 +141,7 @@ class Batch:
     product: str
     released: float
     done: Optional[float] = None
+    entered: Optional[float] = None   # time the lot entered the plant (differs from `released` only with conwip)
     rejected: bool = False
     waits: Dict[str, float] = field(default_factory=dict)
     trace: list = field(default_factory=list)   # (stage index, arrive, start, end)
@@ -263,7 +267,7 @@ def _next_wave(t: float, waves: List[float]) -> float:
 
 
 def simulate(plant: Plant) -> Result:
-    if plant.dispatch in ("edd", "spt", "cr") or plant.hours_factor is not None or any(s.buffer is not None or s.pm_every_h for s in plant.stages):
+    if plant.dispatch in ("edd", "spt", "cr") or plant.hours_factor is not None or plant.conwip is not None or any(s.buffer is not None or s.pm_every_h for s in plant.stages):
         return simulate_des(plant)
     return simulate_fifo(plant)
 
@@ -561,6 +565,11 @@ def simulate_des(plant: Plant) -> Result:
             if u is not None:
                 u["state"], u["batch"], u["free_at"] = "idle", None, now
                 dispatch(keys[k], now)
+            if plant.conwip is not None:                 # a card comes back: admit the oldest waiting lot
+                inside[0] -= 1
+                if card_wait:
+                    inside[0] += 1
+                    admit(card_wait.pop(0), now)
             return
         if has_room(k + 1, now) and not blocked[k + 1]:
             cur_trace[i][4] = now
@@ -574,15 +583,26 @@ def simulate_des(plant: Plant) -> Result:
             if u is not None:
                 u["state"] = "blocked"
 
+    inside = [0]          # lots in the plant (conwip)
+    card_wait: List[int] = []
+
+    def admit(i, now):
+        batches[i].entered = now
+        if has_room(0, now) and not blocked[0]:
+            enter(i, 0, now)
+        else:
+            cur_trace[i] = [0, now, now, now, now]
+            blocked[0].append((now, i, None, -1))
+
     while heap:
         now, _, kind, a = heapq.heappop(heap)
         if kind == "release":
             i = a[0]
-            if has_room(0, now) and not blocked[0]:
-                enter(i, 0, now)
+            if plant.conwip is not None and inside[0] >= plant.conwip:
+                card_wait.append(i)                      # no card free: the order waits outside the plant
             else:
-                cur_trace[i] = [0, now, now, now, now]
-                blocked[0].append((now, i, None, -1))
+                inside[0] += 1
+                admit(i, now)
         elif kind == "done":
             advance(a[0], a[1], a[2], now)
         elif kind == "leave":

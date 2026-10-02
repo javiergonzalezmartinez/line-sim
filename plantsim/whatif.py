@@ -94,6 +94,11 @@ def metrics(plant, res) -> Dict[str, float]:
             "Rejected lots (window)": float(res.rejected), "Busiest stage utilisation": util,
             "Blocked resource-hours": sum(st.blocked for st in res.stats),
             "Setup hours (all stages)": sum(st.setup for st in res.stats), "Repair hours (all stages)": sum(st.repair for st in res.stats), "Preventive maintenance hours": sum(st.pm for st in res.stats), "Longest queue wait (h)": max(st.max_queue_wait for st in res.stats)}
+    if plant.conwip is not None:
+        ins = [b.done - (b.entered if b.entered is not None else b.released) for b in res.finished if res.horizon - res.window <= b.done <= res.horizon]
+        if ins:
+            m["Mean time inside the plant (days)"] = sum(ins) / len(ins) / 24.0
+        m["Mean wait for a card (days)"] = sum((b.entered - b.released) for b in res.finished if b.entered is not None and res.horizon - res.window <= b.done <= res.horizon) / max(len(ins), 1) / 24.0
     return _with_due(plant, res, m)
 
 

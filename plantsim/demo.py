@@ -24,6 +24,7 @@ PAGES = [
  ("rules.html", "Queue rules: FIFO, EDD, SPT, critical ratio", "examples/rules.json", ["--seeds", "10", "--rules-sweep"]),
  ("warmup.html", "Warm-up check (Welch)", "examples/pharma_flow.json", ["--seeds", "10", "--warmup-view"]),
  ("reps.html", "How many replications", "examples/pharma_flow.json", ["--max-reps", "30", "--reps-view"]),
+ ("conwip.html", "CONWIP card sweep", "examples/conwip.json", ["--seeds", "5", "--cards", "2,4,8,12", "--conwip-sweep"]),
  ("sensitivity.html", "One-at-a-time sensitivity (tornado)", "examples/pharma_flow.json", ["--seeds", "6", "--sens-view"]),
  ("pareto.html", "Pareto of lost hours", "examples/pm_b.json", ["--pareto-view"]),
  ("pm.html", "Preventive maintenance what-if", "examples/pm_a.json", ["--whatif", "examples/pm_b.json", "--seeds", "20", "--whatif-view"]),
