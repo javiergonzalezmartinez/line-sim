@@ -883,7 +883,34 @@
     "tau_h": 0.25,
     "noise_sd": 0.3,
     "sample_s": 60,
-    "deadband": 1.0
+    "deadband": 1.0,
+    "limits": {
+     "high": 66,
+     "hysteresis": 1.5
+    },
+    "faults": [
+     {
+      "type": "step",
+      "start_h": 700,
+      "dur_h": 3,
+      "delta": 9
+     },
+     {
+      "type": "stochastic_excursion",
+      "rate_per_100h": 0.6,
+      "dur_h": 1.5,
+      "delta": 8
+     },
+     {
+      "type": "drift",
+      "start_h": 1000,
+      "rate_per_h": 0.006
+     },
+     {
+      "type": "calibration_overdue",
+      "valid_until_h": 1500
+     }
+    ]
    },
    "rpm": {
     "idle": 0,

@@ -20,11 +20,11 @@ Everything is **synthetic**: no real plant, company or personal data. Parameters
 | ![KPIs](docs/img/m14_kpis.png) **KPIs from the event log** | ![Handshakes](docs/img/m15_handshakes.png) **Interface handshakes**: retries, timeouts |
 | ![Handling units](docs/img/m16_handling.png) **Handling units and pallets** | ![Fleet](docs/img/m17_fleet.png) **Forklift/AGV fleet** sizing |
 | ![Quality](docs/img/m18_quality.png) **Quality holds and rejections** | ![Process value](docs/img/m21_process.png) **Process value with deadband** |
-| ![Material](docs/img/m10_material.png) **Material shortages** | |
+| ![Material](docs/img/m10_material.png) **Material shortages** | ![Faults](docs/img/m22_faults.png) **Injected sensor faults and excursions** |
 
 ## Milestones
 
-M1-M6 line simulator, plant model, signal layer, finite buffers and blocking. M7 buffer size 0. M8 capacity on wait stages. M9 shifts and breaks. M10 material shortages. M11 canonical events and schema validator. M12 8 state machines. M13 machine signals. M14 KPIs. M15 interface handshakes and a seed scenario. M16 handling units and pallets. M17 forklift/AGV transport. M18 quality status. M19 live dashboard. M21 analog process values. Each one has tests and a section below.
+M1-M6 line simulator, plant model, signal layer, finite buffers and blocking. M7 buffer size 0. M8 capacity on wait stages. M9 shifts and breaks. M10 material shortages. M11 canonical events and schema validator. M12 8 state machines. M13 machine signals. M14 KPIs. M15 interface handshakes and a seed scenario. M16 handling units and pallets. M17 forklift/AGV transport. M18 quality status. M19 live dashboard. M21 analog process values. M22 fault injection (drift, step, stochastic excursion, calibration overdue). Each one has tests and a section below.
 
 ## What is real, illustrative, or not modelled
 
@@ -33,7 +33,7 @@ M1-M6 line simulator, plant model, signal layer, finite buffers and blocking. M7
 | Real (computed by the code) | the simulation, every event, state change, hash, KPI and count; the tests that check them |
 | Illustrative (invented, labelled) | every duration, rate, capacity-of-vehicles, failure probability and name in the examples |
 | TBD in the specification, left TBD | simulation parameters; the defaults then invent nothing (ideal handshake, no extra holds, no shipment) |
-| Not modelled (listed in the coverage table below) | 41 of 46 signals, 22 of 30 failure modes, 12 of 26 KPIs, expiry, retests, travel to pick-up, charging |
+| Not modelled (listed in the coverage table below) | 41 of 46 signals, 18 of 30 failure modes (4 more with the M22 config), 12 of 26 KPIs, expiry, retests, travel to pick-up, charging |
 
 Rules of the project: private repository, fictitious data only, no personal or employer data, no paid services, nothing published without the owner's OK. Public sources used: ISA-88 / ISA-95 concepts, OPC UA, GS1 EPCIS, EU Annex 11, 21 CFR 11, and the public SAP Learning pages cited below.
 
@@ -132,8 +132,8 @@ Parameters (`hu_per_lot`, `hu_per_pallet`, `release_delay_h`, `ship_delay_h`) co
 |---|---|
 | State machines (8) | all 8 used: JOB_ORDER, PHASE_EXECUTION, MESSAGE, HANDLING_UNIT, TRANSPORT_TASK, QUALITY_STATUS. MACHINERY_ITEM_STATE and MACHINERY_OPERATION_MODE through the signals |
 | Signals (46) | 5 always produced (SIG-0001/0002/0003/0004/0010) plus any analog signal SIG-0013..0026 you configure per stage (M21; the demo config uses temperature, rpm, vibration_rms). The rest (temperature, pressure, mass, flow, barcode, RFID, ...) have no basis in the simulation and are NOT produced |
-| Failure modes (30) | modelled: FME-005 (hold after release, `hold_p`), FME-008 (destination full, via finite buffers), FME-009/013 (ACK lost/timeout), FME-010 (route blocked, `route_block_p`), FME-011 (duplicate), FME-014 (rejection), FME-016 (breakdown). NOT modelled: the other 22 (identity, stock mismatch, expiry, scale, calibration, excursions, human errors, printing, cold chain, audit/backup) |
-| KPIs (26) | computed: 001-006 (006 also for the vehicle fleet), 011 (lot level), 014 (only with `due_h`), 015-018, 023, 026. Not computed (no basis in the sim): 007-010 blocking/starvation/setup/downtime fractions, 012-013 inventory and FEFO, 019-022 data freshness, clock skew, audit and signatures, 024-025 excursions and rework |
+| Failure modes (30) | modelled: FME-005 (hold after release, `hold_p`), FME-008 (destination full, via finite buffers), FME-009/013 (ACK lost/timeout), FME-010 (route blocked, `route_block_p`), FME-011 (duplicate), FME-014 (rejection), FME-016 (breakdown), and with the M22 config FME-017 (sensor drift), FME-019 (calibration overdue), FME-020 (parameter excursion), FME-028 (stochastic excursion). NOT modelled: the other 18 (identity, stock mismatch, expiry, scale, calibration, excursions, human errors, printing, cold chain, audit/backup) |
+| KPIs (26) | computed: 024 (excursion duration, with M22 limits), 001-006 (006 also for the vehicle fleet), 011 (lot level), 014 (only with `due_h`), 015-018, 023, 026. Not computed (no basis in the sim): 007-010 blocking/starvation/setup/downtime fractions, 012-013 inventory and FEFO, 019-022 data freshness, clock skew, audit and signatures, 024-025 excursions and rework |
 | Parameters marked TBD | stay TBD: the examples use labelled illustrative values |
 
 ## M19: live dashboard (one HTML file)
@@ -150,3 +150,19 @@ Parameters (`hu_per_lot`, `hu_per_pallet`, `release_delay_h`, `ship_delay_h`) co
 - Model: first-order response, `dx/dt = (setpoint - x)/tau`, setpoint = `run` while the equipment executes and `idle` otherwise (exact solution between samples), plus seeded Gaussian measurement noise. Textbook model, no plant physics.
 - Sampling: every `sample_s` seconds, reported by exception with an **absolute deadband**, as in the OPC UA DataChangeFilter: "Generate a Notification if absolute value of (last cached value - current value) > AbsoluteDeadband" (OPC 10000-4, section 7.22.2, https://reference.opcfoundation.org/specs/OPC-10000-4/7.22.2, read 2 Oct 2026). The first sample is always reported. In the demo the deadband keeps 1 to 6% of the samples.
 - Every number (idle, run, tau, noise, sample time, deadband) comes from the config and is illustrative; the spec has none. No config, no events. Not modelled: sensor drift, calibration, bad or stale quality (always GOOD), coupling between signals, percent deadband.
+
+## M22: fault injection on process values (synthetic)
+
+Each analog signal of the `process_values` config can carry `limits` (`low`/`high`, optional `hysteresis`) and a list of `faults`, with the injection types the spec names in `spec/failures.json` (column "Inyección simulación"):
+
+| Fault | Spec id | Injection | What the code does |
+|---|---|---|---|
+| `drift` | FME-017 sensor drift | drift ramp | adds `rate_per_h` x hours since `start_h` to what the sensor reports (ground truth unchanged) |
+| `step` | FME-020 parameter excursion | sensor step/outlier | adds `delta` between `start_h` and `start_h + dur_h` |
+| `stochastic_excursion` | FME-028 temperature excursion | stochastic excursion | seeded exponential arrivals (`rate_per_100h`), each lasting `dur_h` with `delta` |
+| `calibration_overdue` | FME-019 calibration overdue | calendar event | from `valid_until_h` the signal quality is UNCERTAIN |
+
+A limit evaluator opens and closes `excursion.opened` / `excursion.closed` events (KPI-024 ExcursionDuration). `hysteresis` closes an excursion only when the value is back inside the limit by that margin, so measurement noise does not chatter an excursion open and closed. Note what the picture shows: a slow **drift is not an excursion until it crosses the limit, then it looks exactly like one** (false excursions at the end of the run), which is why the spec detects drift by calibration/analytics, not by limits.
+
+- Sources: injection types and detection from the provided spec (`spec/failures.json`); UNCERTAIN as "the operation was partially successful and results might not be suitable for some purposes" in OPC 10000-4 section 7.38.1 (https://reference.opcfoundation.org/specs/OPC-10000-4/7.38.1, read 2 Oct 2026); absolute deadband as in M21.
+- All rates, deltas, dates and limits come from the config and are illustrative. Not modelled: FME-018 scale unstable (needs a weighing capture flow), FME-026 printer unavailable, the safe responses (holding the batch, quarantining material, removing the instrument from eligible resources), detection by analytics, drift correction.

@@ -68,3 +68,67 @@ class ProcessValueTests(unittest.TestCase):
                     {"Quarantine (waiting for QC)": {"temperature": good}}):
             with self.assertRaises(ValueError):
                 process_values(P, R, bad)
+
+
+class FaultTests(unittest.TestCase):
+    def test_drift_is_a_linear_ramp_from_start(self):
+        from plantsim.processvalues import apply_faults
+        base = [(float(t), 10.0) for t in range(0, 11)]
+        out, cal, inj = apply_faults(base, {"faults": [{"type": "drift", "start_h": 4, "rate_per_h": 0.5}]}, "k", 10)
+        self.assertEqual([v for _, v in out][:5], [10.0] * 5)
+        self.assertAlmostEqual(out[8][1], 10 + 0.5 * 4)
+        self.assertIsNone(cal)
+
+    def test_step_only_inside_its_window(self):
+        from plantsim.processvalues import apply_faults
+        base = [(float(t), 0.0) for t in range(10)]
+        out, _, _ = apply_faults(base, {"faults": [{"type": "step", "start_h": 2, "dur_h": 3, "delta": 5}]}, "k", 10)
+        self.assertEqual([v for _, v in out], [0, 0, 5, 5, 5, 0, 0, 0, 0, 0])
+
+    def test_excursion_evaluator_hysteresis_stops_chatter(self):
+        from plantsim.processvalues import excursions
+        s = [(0, 60), (1, 67), (2, 65.5), (3, 66.5), (4, 63), (5, 60)]
+        self.assertEqual(len(excursions(s, {"high": 66})), 2)                      # chatters around the limit
+        self.assertEqual(excursions(s, {"high": 66, "hysteresis": 1.5}), [(1, 4)])  # one excursion, closes below 64.5
+        self.assertEqual(excursions([(0, 1), (1, 9)], {"high": 5}), [(1, None)])
+        self.assertEqual(excursions(s, None), [])
+
+    def test_calibration_overdue_marks_quality_uncertain_only_after_the_date(self):
+        cfg = {"Granulation + drying": {"temperature": {"idle": 22, "run": 60, "tau_h": 0.1, "sample_s": 600, "deadband": 0.0,
+                                                          "faults": [{"type": "calibration_overdue", "valid_until_h": 1000}]}}}
+        from plantsim.kpis import hours
+        for e in process_values(P, R, cfg):
+            q = e["sensor_elements"][0]["signal_quality"]
+            self.assertEqual(q, "UNCERTAIN" if hours(e["event_time"]) >= 1000 else "GOOD")
+
+    def test_injected_step_opens_and_closes_one_excursion_with_kpi(self):
+        from plantsim.processvalues import excursion_kpis
+        cfg = {"Granulation + drying": {"temperature": {"idle": 22, "run": 60, "tau_h": 0.05, "sample_s": 60, "deadband": 1.0, "limits": {"high": 70, "hysteresis": 1.0},
+                                                          "faults": [{"type": "step", "start_h": 800, "dur_h": 2, "delta": 20}]}}}
+        ev = process_values(P, R, cfg)
+        k = excursion_kpis(ev)
+        self.assertGreaterEqual(k["excursions_closed"], 1)
+        self.assertEqual(k["excursions_open_at_end"], 0)
+        self.assertGreater(k["KPI-024 ExcursionDuration mean (h)"], 0)
+        for e in ev:
+            if e["event_class"] == "CONTROL":
+                self.assertEqual(validate(e, SCHEMA), [])
+
+    def test_no_limits_no_excursions_and_stochastic_is_deterministic(self):
+        from plantsim.processvalues import apply_faults
+        ev = process_values(P, R, {"Granulation + drying": {"temperature": {"idle": 22, "run": 60, "tau_h": 0.1, "faults": [{"type": "drift", "start_h": 5, "rate_per_h": 1}]}}})
+        self.assertFalse([e for e in ev if e["event_class"] == "CONTROL"])
+        f = {"faults": [{"type": "stochastic_excursion", "rate_per_100h": 3, "dur_h": 1, "delta": 5}]}
+        base = [(float(t), 0.0) for t in range(500)]
+        self.assertEqual(apply_faults(base, f, "a", 500), apply_faults(base, f, "a", 500))
+        self.assertNotEqual(apply_faults(base, f, "a", 500)[0], apply_faults(base, f, "b", 500)[0])
+        z = {"faults": [{"type": "stochastic_excursion", "rate_per_100h": 0, "dur_h": 1, "delta": 5}]}
+        self.assertEqual(apply_faults(base, z, "a", 500)[0], base)
+
+    def test_bad_fault_config_rejected(self):
+        g = {"idle": 1, "run": 2, "tau_h": 0.1}
+        st = "Granulation + drying"
+        for bad in ({"faults": [{"type": "nope"}]}, {"faults": [{"type": "drift", "start_h": 1}]}, {"faults": [{"type": "step", "start_h": 1, "dur_h": 1, "delta": 1, "zzz": 2}]},
+                    {"limits": {"hysteresis": 1}}, {"limits": {"low": 5, "high": 1}}, {"faults": [{"type": "stochastic_excursion", "rate_per_100h": 1, "dur_h": 0, "delta": 1}]}):
+            with self.assertRaises(ValueError):
+                process_values(P, R, {st: {"temperature": dict(g, **bad)}})
