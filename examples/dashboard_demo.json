@@ -873,5 +873,36 @@
   "lab_h": 8.0,
   "hold_p": 0.04,
   "hold_h": 6.0
+ },
+ "process_values": {
+  "_note": "ILLUSTRATIVE placeholders (the spec has no values): first-order response between idle and run values, deadband per signal.",
+  "Granulation + drying": {
+   "temperature": {
+    "idle": 22,
+    "run": 60,
+    "tau_h": 0.25,
+    "noise_sd": 0.3,
+    "sample_s": 60,
+    "deadband": 1.0
+   },
+   "rpm": {
+    "idle": 0,
+    "run": 300,
+    "tau_h": 0.02,
+    "noise_sd": 2,
+    "sample_s": 60,
+    "deadband": 10
+   }
+  },
+  "Compression": {
+   "vibration_rms": {
+    "idle": 0.3,
+    "run": 2.5,
+    "tau_h": 0.01,
+    "noise_sd": 0.1,
+    "sample_s": 30,
+    "deadband": 0.3
+   }
+  }
  }
 }

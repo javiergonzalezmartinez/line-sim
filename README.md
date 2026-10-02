@@ -19,11 +19,12 @@ Everything is **synthetic**: no real plant, company or personal data. Parameters
 | ![State machines](docs/img/m12_fsm.png) **State machines** with state hashes | ![Signals](docs/img/m13_signals.png) **Machine signals** timeline |
 | ![KPIs](docs/img/m14_kpis.png) **KPIs from the event log** | ![Handshakes](docs/img/m15_handshakes.png) **Interface handshakes**: retries, timeouts |
 | ![Handling units](docs/img/m16_handling.png) **Handling units and pallets** | ![Fleet](docs/img/m17_fleet.png) **Forklift/AGV fleet** sizing |
-| ![Quality](docs/img/m18_quality.png) **Quality holds and rejections** | ![Material](docs/img/m10_material.png) **Material shortages** |
+| ![Quality](docs/img/m18_quality.png) **Quality holds and rejections** | ![Process value](docs/img/m21_process.png) **Process value with deadband** |
+| ![Material](docs/img/m10_material.png) **Material shortages** | |
 
 ## Milestones
 
-M1-M6 line simulator, plant model, signal layer, finite buffers and blocking. M7 buffer size 0. M8 capacity on wait stages. M9 shifts and breaks. M10 material shortages. M11 canonical events and schema validator. M12 8 state machines. M13 machine signals. M14 KPIs. M15 interface handshakes and a seed scenario. M16 handling units and pallets. M17 forklift/AGV transport. M18 quality status. M19 live dashboard. Each one has tests and a section below.
+M1-M6 line simulator, plant model, signal layer, finite buffers and blocking. M7 buffer size 0. M8 capacity on wait stages. M9 shifts and breaks. M10 material shortages. M11 canonical events and schema validator. M12 8 state machines. M13 machine signals. M14 KPIs. M15 interface handshakes and a seed scenario. M16 handling units and pallets. M17 forklift/AGV transport. M18 quality status. M19 live dashboard. M21 analog process values. Each one has tests and a section below.
 
 ## What is real, illustrative, or not modelled
 
@@ -130,7 +131,7 @@ Parameters (`hu_per_lot`, `hu_per_pallet`, `release_delay_h`, `ship_delay_h`) co
 | Spec item | Status |
 |---|---|
 | State machines (8) | all 8 used: JOB_ORDER, PHASE_EXECUTION, MESSAGE, HANDLING_UNIT, TRANSPORT_TASK, QUALITY_STATUS. MACHINERY_ITEM_STATE and MACHINERY_OPERATION_MODE through the signals |
-| Signals (46) | 5 produced (SIG-0001/0002/0003/0004/0010). The other 41 (temperature, pressure, mass, flow, barcode, RFID, ...) have no basis in the simulation and are NOT produced |
+| Signals (46) | 5 always produced (SIG-0001/0002/0003/0004/0010) plus any analog signal SIG-0013..0026 you configure per stage (M21; the demo config uses temperature, rpm, vibration_rms). The rest (temperature, pressure, mass, flow, barcode, RFID, ...) have no basis in the simulation and are NOT produced |
 | Failure modes (30) | modelled: FME-005 (hold after release, `hold_p`), FME-008 (destination full, via finite buffers), FME-009/013 (ACK lost/timeout), FME-010 (route blocked, `route_block_p`), FME-011 (duplicate), FME-014 (rejection), FME-016 (breakdown). NOT modelled: the other 22 (identity, stock mismatch, expiry, scale, calibration, excursions, human errors, printing, cold chain, audit/backup) |
 | KPIs (26) | computed: 001-006 (006 also for the vehicle fleet), 011 (lot level), 014 (only with `due_h`), 015-018, 023, 026. Not computed (no basis in the sim): 007-010 blocking/starvation/setup/downtime fractions, 012-013 inventory and FEFO, 019-022 data freshness, clock skew, audit and signatures, 024-025 excursions and rework |
 | Parameters marked TBD | stay TBD: the examples use labelled illustrative values |
@@ -141,3 +142,11 @@ Parameters (`hu_per_lot`, `hu_per_pallet`, `release_delay_h`, `ship_delay_h`) co
 
 - The twin layer is precomputed in Python for the loaded config (same seed and plant model). If you change a parameter in the animation panel, the animation re-runs but the layer does not, and the page says so. Counts run from hour 0 (include warm-up), so they differ from the steady-state cards.
 - `examples/dashboard_demo.json` = the fictitious pharma plant plus illustrative `handshake`, `handling`, `transport` and `quality` parameters (the spec has no values).
+
+## M21: analog process values with report-by-exception (synthetic)
+
+`python3 -m plantsim examples/dashboard_demo.json --process-values pv.jsonl --process-view pv.html` produces analog signals (spec SIG-0013..0026: temperature, pressure, rpm, mass, vibration, ...) for the stages named in the `process_values` config key, as sensor events with the spec's signal id and unit.
+
+- Model: first-order response, `dx/dt = (setpoint - x)/tau`, setpoint = `run` while the equipment executes and `idle` otherwise (exact solution between samples), plus seeded Gaussian measurement noise. Textbook model, no plant physics.
+- Sampling: every `sample_s` seconds, reported by exception with an **absolute deadband**, as in the OPC UA DataChangeFilter: "Generate a Notification if absolute value of (last cached value - current value) > AbsoluteDeadband" (OPC 10000-4, section 7.22.2, https://reference.opcfoundation.org/specs/OPC-10000-4/7.22.2, read 2 Oct 2026). The first sample is always reported. In the demo the deadband keeps 1 to 6% of the samples.
+- Every number (idle, run, tau, noise, sample time, deadband) comes from the config and is illustrative; the spec has none. No config, no events. Not modelled: sensor drift, calibration, bad or stale quality (always GOOD), coupling between signals, percent deadband.

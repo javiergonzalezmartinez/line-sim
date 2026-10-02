@@ -13,7 +13,7 @@ def load(path):
     return Plant(st, d["products"], d["release_every"], d.get("horizon", 2016), d.get("warmup", 336), d.get("seed", 1), d.get("layout"), d.get("m_per_px", 0.0), d.get("speed_kmh", 6.0), d.get("handling_min", 6.0))
 
 def main(argv=None):
-    ap = argparse.ArgumentParser(prog="plantsim"); ap.add_argument("config"); ap.add_argument("--view", help="write animated HTML view"); ap.add_argument("--events", help="write the canonical event log (JSONL)"); ap.add_argument("--telemetry", help="write machine telemetry sensor events (JSONL)"); ap.add_argument("--kpis", help="write KPIs computed from the event log (HTML)"); ap.add_argument("--handling", help="write handling-unit and pallet events (JSONL); parameters from the config key \"handling\""); ap.add_argument("--handling-view", help="write handling-unit HTML page"); ap.add_argument("--transport", help="write transport task events (JSONL); config key \"transport\""); ap.add_argument("--transport-view", help="write fleet HTML page"); ap.add_argument("--quality", help="write quality status events (JSONL); config key \"quality\""); ap.add_argument("--quality-view", help="write quality HTML page"); ap.add_argument("--dashboard", help="write the live dashboard (animated plant + digital-twin panel, one HTML file)"); ap.add_argument("--messages", help="write interface handshake message events (JSONL); parameters from the config key \"handshake\"")
+    ap = argparse.ArgumentParser(prog="plantsim"); ap.add_argument("config"); ap.add_argument("--view", help="write animated HTML view"); ap.add_argument("--events", help="write the canonical event log (JSONL)"); ap.add_argument("--telemetry", help="write machine telemetry sensor events (JSONL)"); ap.add_argument("--kpis", help="write KPIs computed from the event log (HTML)"); ap.add_argument("--handling", help="write handling-unit and pallet events (JSONL); parameters from the config key \"handling\""); ap.add_argument("--handling-view", help="write handling-unit HTML page"); ap.add_argument("--transport", help="write transport task events (JSONL); config key \"transport\""); ap.add_argument("--transport-view", help="write fleet HTML page"); ap.add_argument("--quality", help="write quality status events (JSONL); config key \"quality\""); ap.add_argument("--quality-view", help="write quality HTML page"); ap.add_argument("--dashboard", help="write the live dashboard (animated plant + digital-twin panel, one HTML file)"); ap.add_argument("--process-values", help="write analog process value events (JSONL); config key \"process_values\""); ap.add_argument("--process-view", help="write HTML chart of the first configured process value"); ap.add_argument("--messages", help="write interface handshake message events (JSONL); parameters from the config key \"handshake\"")
     a = ap.parse_args(argv)
     p = load(a.config); r = simulate(p)
     print(f"throughput {r.throughput_per_week:.2f} batches/week, mean lead time {r.mean_lead_time_days:.1f} days, busiest: {r.bottleneck}, rejected lots in window: {r.rejected}")
@@ -71,6 +71,17 @@ def main(argv=None):
         from .dashboard import build
         open(a.dashboard, "w", encoding="utf-8").write(build(p, json.load(open(a.config, encoding="utf-8"))))
         print("dashboard written to", a.dashboard)
+    if a.process_values or a.process_view:
+        from .events import write_jsonl
+        from .processvalues import process_values, reduction, render_html as pr
+        pc = json.load(open(a.config, encoding="utf-8")).get("process_values") or {}
+        if a.process_values:
+            pe = process_values(p, r, pc)
+            print(f"{write_jsonl(pe, a.process_values)} process value events written to {a.process_values}; {reduction(p, pe, pc)}")
+        if a.process_view:
+            st = next(k for k in pc if not k.startswith("_"))
+            open(a.process_view, "w", encoding="utf-8").write(pr(p, r, pc, st, next(iter(pc[st]))))
+            print("process value page written to", a.process_view)
     if a.messages:
         from .events import write_jsonl
         from .handshakes import messages, message_kpis
