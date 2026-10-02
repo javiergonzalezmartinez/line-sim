@@ -29,6 +29,26 @@ def closed(B: float, mu_h: float, Tt_h: float, rem: float):
     return P, B / 2 + P * ED2 / (2 * ED)
 
 
+def closed_exact(B: float, mu_h: float, Tt_h: float, rem: float, n: int = 4000):
+    """Phase-corrected closed form (M75 follow-up). After a fault is cleared at a test + rem, the next healthy time H is exponential, so the onset phase in the
+    test period is (rem + H) mod Tt, not uniform; the fault then lasts D = (Tt - phase) + rem. Same renewal argument as `closed`, with E[D], E[D^2] taken over that
+    wrapped exponential (midpoint integration, n cells). Equals `closed` when mu Tt is small."""
+    import math
+    w = Tt_h / n
+    dens, tot = [], 0.0
+    for i in range(n):
+        ph = (i + 0.5) * w
+        k0 = max(0, math.ceil((rem - ph) / Tt_h))          # first test period in which the onset can fall at this phase
+        f = mu_h * math.exp(-mu_h * (ph + k0 * Tt_h - rem)) / (1.0 - math.exp(-mu_h * Tt_h))   # geometric sum over later periods
+        dens.append(f); tot += f
+    ED = ED2 = 0.0
+    for i, f in enumerate(dens):
+        D = Tt_h - (i + 0.5) * w + rem
+        ED += f / tot * D; ED2 += f / tot * D * D
+    P = ED / (1.0 / mu_h + ED)
+    return P, B / 2 + P * ED2 / (2 * ED)
+
+
 def _one(rg, B, mu_h, Tt_h, rem, horizon, draws):
     # fault intervals [onset, end)
     faults, t = [], 0.0

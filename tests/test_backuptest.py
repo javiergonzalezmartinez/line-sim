@@ -1,5 +1,5 @@
 import random, unittest
-from plantsim.backuptest import sweep, render_html, closed, _one
+from plantsim.backuptest import sweep, render_html, closed, closed_exact, _one
 from plantsim.cli import load
 
 class T(unittest.TestCase):
@@ -14,6 +14,16 @@ class T(unittest.TestCase):
         P, M = closed(24, 1 / 500.0, 168.0, 12)
         self.assertAlmostEqual(p, P, delta=0.02)
         self.assertAlmostEqual(sum(ls) / len(ls), M, delta=0.12 * M)
+    def test_phase_corrected_form(self):
+        mu, Tt = 0.0111 / 24, 90 * 24.0
+        rg = random.Random(11)
+        p, ls = _one(rg, 24, mu, Tt, 12, 24 * 365 * 150, 40000)
+        m = sum(ls) / len(ls)
+        P1, M1 = closed(24, mu, Tt, 12); P2, M2 = closed_exact(24, mu, Tt, 12)
+        self.assertLess(abs(M2 - m) / m, 0.08); self.assertAlmostEqual(P2, p, delta=0.02)
+        self.assertGreater(abs(M1 - m) / m, 0.10)          # the uniform-phase form is clearly off here
+        a, b = closed(24, 1e-6, 24.0, 12), closed_exact(24, 1e-6, 24.0, 12)
+        self.assertAlmostEqual(a[1], b[1], delta=0.01 * a[1])   # equal when mu Tt is small
     def test_sweep(self):
         p = load("examples/pharma_flow.json")
         r = sweep(p, [1, 30, 180], 24, 1 / 90.0, 12, 3, 1500)
