@@ -31,7 +31,7 @@ Everything is **synthetic**: no real plant, company or personal data. Parameters
 | ![Welch](docs/img/m41_welch.png) **Warm-up check** (Welch) | ![Replications](docs/img/m42_reps.png) **How many replications** |
 | ![Need](docs/img/m43_need.png) **Seeds needed** to see a difference | ![Tornado](docs/img/m44_tornado.png) **Sensitivity** (tornado) |
 | ![CONWIP](docs/img/m45_conwip.png) **CONWIP** card sweep | ![CRN](docs/img/m46_crn.png) **Same seeds or not** (common random numbers) |
-| ![PM sweep](docs/img/m47_pmsweep.png) **PM interval sweep** | |
+| ![PM sweep](docs/img/m47_pmsweep.png) **PM interval sweep** | ![Little](docs/img/m51_little.png) **Little's law check** |
 
 ## Milestones
 
@@ -304,3 +304,7 @@ Every "not clear" row of a what-if page now shows a rough planning figure: if th
 ## Preventive-maintenance interval sweep (M47)
 
 `python -m plantsim.cli examples/pm_b.json --pm-sweep pm.html --pm-intervals 25,50,100,150,300,600 --seeds 8` sets `pm_every_h` on every stage with `wear_per_100h > 0` (each keeps its own `pm_hours`) and shows throughput, lead time, repair hours, PM hours and their sum, with 95% CI over the same seeds; "never" is the no-PM reference. Frame: fixed-interval maintenance as at https://en.wikipedia.org/wiki/Preventive_maintenance (read 2 Oct 2026); that page gives no rule for the interval, so none is claimed. With the placeholders of pm_b (wear +50% breakdown probability per 100 run-hours, PM 4 h) the simulation shows a U shape: PM every 25 h loses throughput to PM time (8.75/week vs 9.09 with no PM), 150 h gives the highest mean (9.49), 600 h drifts back toward no PM. Repair hours fall from about 500 to 170-390 as PM gets more frequent while PM hours rise from 16 to 500. Differences between neighbouring intervals can be inside the CI. The optimum belongs to the placeholders, not to a real machine. Hours only, no cost; partial restoration and condition-based PM are not modelled.
+
+## Little's law check (M51)
+
+`python -m plantsim.cli examples/pharma_flow.json --little-view little.html --seeds 8` compares, per seed, the time-average number of lots in the plant (L) with arrival rate x mean time in the plant (lambda W) over the measurement window. Law as read at https://en.wikipedia.org/wiki/Little%27s_law (2 Oct 2026): L = lambda W for a stationary system; the page also says an unstable system, where arrivals exceed exits, keeps growing. Result (illustrative placeholders): pharma_flow agrees within about 2.5% (from -1.3% to +2.3% over 5 seeds), which is the finite-window boundary effect. The deliberately overloaded examples do not: conwip.json shows about +105% and whatif_a.json about +40%, because lots that arrive in the window wait long beyond it (the queue grows), so the check is also a steady-state alarm. The 10% red threshold on the page is a rule of this code. Sub-systems, non-stationary phases and lots released after the horizon are not checked.
