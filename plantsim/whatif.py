@@ -114,6 +114,16 @@ def replicate(plant, n: int) -> List[Dict[str, float]]:
     return out
 
 
+def _need_n(n, md, hd):
+    """Rough planning figure: the CI half-width shrinks like 1/sqrt(n) (NIST e-Handbook 7.2.2.1: half-width = t*s/sqrt(n)), so if the observed
+    mean difference were the true one, about n*(half-width/|mean diff|)^2 seeds would make the interval just exclude 0 (t quantile change ignored).
+    Returns None when the difference is about 0 (nothing to plan for) or the interval already excludes 0."""
+    h = hd - md
+    if abs(md) < 1e-12 or h <= 0 or abs(md) > h:
+        return None
+    return int(math.ceil(n * (h / abs(md)) ** 2))
+
+
 def compare(plant_a, plant_b, n: int = 20) -> Dict:
     if n < 2:
         raise ValueError("need at least 2 replications")
@@ -125,7 +135,7 @@ def compare(plant_a, plant_b, n: int = 20) -> Dict:
         ma, la, ha, _ = mean_ci(xa)
         mb, lb, hb, _ = mean_ci(xb)
         md, ld, hd, _ = mean_ci(d)
-        rows[k] = {"A": (ma, la, ha), "B": (mb, lb, hb), "diff": (md, ld, hd), "clear": abs(md) > 1e-12 and not (ld <= 0 <= hd)}
+        rows[k] = {"A": (ma, la, ha), "B": (mb, lb, hb), "diff": (md, ld, hd), "clear": abs(md) > 1e-12 and not (ld <= 0 <= hd), "need_n": _need_n(n, md, hd)}
     return {"n": n, "metrics": rows}
 
 
@@ -139,7 +149,8 @@ def render_html(cmp: Dict, name_a: str = "A", name_b: str = "B", note_a: str = "
         X = lambda x: 20 + 380 * (x - lo) / ((hi - lo) or 1)
         bar = lambda m, l, h, y, c: f'<rect x="20" y="{y}" width="{max(1, X(m) - 20):.1f}" height="12" fill="{c}"/><line x1="{X(l):.1f}" x2="{X(h):.1f}" y1="{y + 6}" y2="{y + 6}" stroke="#222" stroke-width="2"/><line x1="{X(l):.1f}" x2="{X(l):.1f}" y1="{y + 1}" y2="{y + 11}" stroke="#222"/><line x1="{X(h):.1f}" x2="{X(h):.1f}" y1="{y + 1}" y2="{y + 11}" stroke="#222"/>'
         svg = f'<svg width=420 height=44>{bar(ma, la, ha, 4, "#868e96")}{bar(mb, lb, hb, 24, "#00857c")}</svg>'
-        verdict = '<b style="color:#00857c">clear</b>' if v["clear"] else '<span style="color:#868e96">not clear (CI includes 0)</span>'
+        nn = v.get("need_n")
+        verdict = '<b style="color:#00857c">clear</b>' if v["clear"] else '<span style="color:#868e96">not clear (CI includes 0)</span>' + (f'<br><small>if this difference were real, about {nn} seeds would show it (rough planning figure, not evidence)</small>' if nn else '')
         rows += f"<tr><td>{H.escape(k)}</td><td>{svg}</td><td>{ma:.3f} [{la:.3f}, {ha:.3f}]</td><td>{mb:.3f} [{lb:.3f}, {hb:.3f}]</td><td><b>{md:+.3f}</b> [{ld:+.3f}, {hd:+.3f}]</td><td>{verdict}</td></tr>"
     return f"""<!doctype html><html><head><meta charset=utf-8><title>{H.escape(title)}</title><style>body{{font:13px system-ui,sans-serif;margin:16px;max-width:1180px}}table{{border-collapse:collapse;width:100%}}th{{background:#0b1226;color:#fff;text-align:left;padding:5px 8px}}td{{padding:4px 8px;border-bottom:1px solid #dde3ea;vertical-align:middle}}.n{{background:#fff4d6;border-left:4px solid #c98a00;padding:6px 10px;margin:8px 0}}</style></head><body><h2>{H.escape(title)}</h2><div class=n>Synthetic and illustrative. {cmp['n']} replications per scenario (seeds consecutive), 95% confidence intervals from the t distribution (NIST/SEMATECH e-Handbook 7.2.2.1 and 7.3.1.1). Grey bar = A ({H.escape(name_a)}) {H.escape(note_a)}; green bar = B ({H.escape(name_b)}) {H.escape(note_b)}. Whiskers = 95% CI of the mean. "Clear" means the paired difference B-A has a 95% CI that does not contain 0.</div>
 <table><tr><th>Metric</th><th>A (grey) and B (green)</th><th>A mean [95% CI]</th><th>B mean [95% CI]</th><th>B - A (paired) [95% CI]</th><th>Verdict</th></tr>{rows}</table></body></html>"""
