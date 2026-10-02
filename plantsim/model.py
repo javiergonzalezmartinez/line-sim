@@ -163,6 +163,8 @@ class StageStat:
     short_lots: int = 0            # lots that had to wait for material (inside the window)
     short_hours: float = 0.0       # resource-hours spent waiting for material (inside the window)
     max_queue: int = 0             # largest number of lots waiting in front of the stage (event-driven engine only)
+    reruns: int = 0                # repeats of the step (retest_p) that started inside the window
+    rerun_hours: float = 0.0       # resource-hours of those repeats inside the window
 
 
 @dataclass
@@ -360,6 +362,9 @@ def simulate_fifo(plant: Plant) -> Result:
                     cur += r
                 if s.retest_p and rng.random() < s.retest_p:
                     dur = _gamma(rng, s.hours, s.cv)
+                    if w0 <= cur < w1:
+                        st.reruns += 1
+                    st.rerun_hours += max(0.0, min(cur + dur, w1) - max(cur, w0))
                     continue
                 break
             end = cur
@@ -546,6 +551,9 @@ def simulate_des(plant: Plant) -> Result:
                     cur += r
                 if s.retest_p and rs(i, k, "retest").random() < s.retest_p:
                     dur = _gamma(rs(i, k, "dur"), s.hours * plant.factor(b.product), s.cv)
+                    if w0 <= cur < w1:
+                        stats[k].reruns += 1
+                    stats[k].rerun_hours += max(0.0, min(cur + dur, w1) - max(cur, w0))
                     continue
                 break
             rec[3] = rec[4] = cur

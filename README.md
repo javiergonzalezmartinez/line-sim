@@ -32,7 +32,7 @@ Everything is **synthetic**: no real plant, company or personal data. Parameters
 | ![Need](docs/img/m43_need.png) **Seeds needed** to see a difference | ![Tornado](docs/img/m44_tornado.png) **Sensitivity** (tornado) |
 | ![CONWIP](docs/img/m45_conwip.png) **CONWIP** card sweep | ![CRN](docs/img/m46_crn.png) **Same seeds or not** (common random numbers) |
 | ![PM sweep](docs/img/m47_pmsweep.png) **PM interval sweep** | ![Little](docs/img/m51_little.png) **Little's law check** |
-| ![Calib2](docs/img/m54_calib2.png) **Two-parameter calibration**: identifiability | |
+| ![Calib2](docs/img/m54_calib2.png) **Two-parameter calibration**: identifiability | ![Rework](docs/img/m55_rework.png) **Repeat (rework) sweep** |
 
 ## Milestones
 
@@ -317,3 +317,7 @@ Follow-up of M46. `"sync_streams": true` in the config gives each (lot, stage, p
 ## Two-parameter calibration: identifiability (M54)
 
 `python -m plantsim.cli examples/pharma_flow.json --calib2-view calib2.html --calib2-stages "Coating,Granulation + drying" --seeds 5` takes the config values of two stages as a hidden truth, builds a reference summary from 10 seeds, and evaluates a 7x7 grid (+-40%) of process hours for the two stages with other seeds. Loss = sum of squared relative errors of the observables; set 1 = throughput and mean lead time (as in calibrate.py), set 2 = set 1 plus the mean queue wait per lot at both stages. Idea of comparing model and system behaviour: Sargent, WSC 2011 (https://www.informs-sim.org/wsc11papers/016.pdf, read 2 Oct 2026); no real data. Result with the pharma_flow placeholders and 5 seeds (illustrative): with set 1, 10 of 49 cells are within the minimum plus twice the noise (the loss of the truth cell, a rule of this code), and the lowest cell has Granulation at 7.8 h instead of 9, so throughput and lead time alone do not pin down both values (the plant is limited by the release interval, as M44 showed). With set 2 only 1 cell is near the minimum and it is the truth. Caveats: one stage pair and one plant, few seeds; with a 2-server stage the queue wait is close to 0 and its relative error is noisy, so the Coating/Compression pair is not a good demo.
+
+## Repeat (rework) sweep (M55)
+
+`python -m plantsim.cli examples/pharma_flow.json --rework-view rework.html --rework-stage Coating --rework-probs 0,0.05,0.1,0.2,0.3,0.4 --seeds 8` sets `retest_p` of one stage to each value and shows the repeats started in the window, the resource-hours they used, their share of the stage's busy hours, throughput and lead time with 95% CI over the same seeds. New per-stage counters `reruns` and `rerun_hours` (inside the measurement window, both engines). A repeat takes a fresh draw of the process time and can repeat again (mean p/(1-p) per lot). No external source is used for the "hidden capacity" framing, so none is claimed. Result with the pharma_flow placeholders (illustrative): up to 10% repeat probability on Coating the throughput does not drop (7.9 to 8.0/week, inside noise), at 20% lead time starts to rise (8.8 to 10.3 days), at 30-40% throughput falls to 7.3 and 6.2/week and lead time to 12-16 days, while the repeat share of the stage's busy hours goes 4% to 42%. So a stage with slack hides rework until it does not. Not modelled: quality or hold effects downstream, money, shorter repeat times, a cap on repeats.
