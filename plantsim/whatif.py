@@ -90,10 +90,21 @@ def mean_ci(xs: List[float], conf: float = 0.95):
 
 def metrics(plant, res) -> Dict[str, float]:
     util = max(sum(res.utilisation(st).values()) for st in res.stats)
-    return {"Throughput (batches/week)": res.throughput_per_week, "Mean lead time (days)": res.mean_lead_time_days,
+    m = {"Throughput (batches/week)": res.throughput_per_week, "Mean lead time (days)": res.mean_lead_time_days,
             "Rejected lots (window)": float(res.rejected), "Busiest stage utilisation": util,
             "Blocked resource-hours": sum(st.blocked for st in res.stats),
             "Setup hours (all stages)": sum(st.setup for st in res.stats), "Repair hours (all stages)": sum(st.repair for st in res.stats), "Preventive maintenance hours": sum(st.pm for st in res.stats), "Longest queue wait (h)": max(st.max_queue_wait for st in res.stats)}
+    return _with_due(plant, res, m)
+
+
+def _with_due(plant, res, m):
+    if plant.due_h is not None:
+        late = [b.done - plant.due_date(b) for b in res.finished if res.horizon - res.window <= b.done <= res.horizon]
+        if late:
+            m["Tardy lots (share)"] = sum(1 for x in late if x > 0) / len(late)
+            m["Mean tardiness (h)"] = sum(max(x, 0.0) for x in late) / len(late)
+            m["Maximum lateness (h)"] = max(late)
+    return m
 
 
 def replicate(plant, n: int) -> List[Dict[str, float]]:

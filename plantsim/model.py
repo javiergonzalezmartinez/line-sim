@@ -56,13 +56,20 @@ class Plant:
     speed_kmh: float = 6.0
     handling_min: float = 6.0
     dispatch: str = "fifo"            # queue rule of the event-driven engine: "fifo" or "same_product_first" (avoid changeovers)
+    due_h: object = None              # due date = release + due_h (hours); a number for all products or {product: hours}. Placeholder values only
     dispatch_max_wait_h: Optional[float] = None   # same_product_first: a lot that has waited longer than this goes first (guard against starvation)
 
     def __post_init__(self):
         if not self.stages or not self.products:
             raise ValueError("need stages and products")
-        if self.dispatch not in ("fifo", "same_product_first"):
-            raise ValueError("dispatch must be fifo or same_product_first")
+        if self.dispatch not in ("fifo", "same_product_first", "edd"):
+            raise ValueError("dispatch must be fifo, same_product_first or edd")
+        if self.dispatch == "edd" and self.due_h is None:
+            raise ValueError("dispatch edd needs due_h")
+        if self.due_h is not None:
+            dv = self.due_h.values() if isinstance(self.due_h, dict) else [self.due_h]
+            if any(v <= 0 for v in dv) or (isinstance(self.due_h, dict) and any(p not in self.due_h for p in self.products)):
+                raise ValueError("due_h must be > 0 (and cover every product when a dict)")
         if self.dispatch_max_wait_h is not None and self.dispatch_max_wait_h <= 0:
             raise ValueError("dispatch_max_wait_h must be > 0")
         if self.release_every <= 0:
@@ -99,6 +106,10 @@ class Plant:
                 elif s.kind != "move" and s.loc not in ids:
                     raise ValueError(f"{s.name}: loc {s.loc!r} is not in the layout")
         self.resolve_moves()
+
+    def due_date(self, b) -> float:
+        d = self.due_h[b.product] if isinstance(self.due_h, dict) else self.due_h
+        return b.released + d
 
     def resolve_moves(self):
         if not (self.layout and self.m_per_px > 0):
@@ -242,7 +253,7 @@ def _next_wave(t: float, waves: List[float]) -> float:
 
 
 def simulate(plant: Plant) -> Result:
-    if any(s.buffer is not None or s.pm_every_h for s in plant.stages):
+    if plant.dispatch == "edd" or any(s.buffer is not None or s.pm_every_h for s in plant.stages):
         return simulate_des(plant)
     return simulate_fifo(plant)
 
@@ -469,6 +480,8 @@ def simulate_des(plant: Plant) -> Result:
                     if batches[bi].product == u["last"]:
                         pos = j
                         break
+            if plant.dispatch == "edd":                    # earliest due date first (Suri, UCSB notes: EDD minimises maximum lateness on one machine)
+                pos = min(range(len(queue[k])), key=lambda j: (plant.due_date(batches[queue[k][j][1]]), queue[k][j][0]))
             _, i = queue[k].pop(pos)
             b, s = batches[i], S[k]
             rec = cur_trace[i]

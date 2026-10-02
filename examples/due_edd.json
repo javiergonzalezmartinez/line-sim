@@ -1,0 +1,872 @@
+{
+ "note": "Due-date what-if, scenario B: earliest-due-date-first queues, same placeholder due dates. ILLUSTRATIVE, synthetic.",
+ "products": [
+  "A",
+  "B",
+  "C"
+ ],
+ "release_every": 12,
+ "horizon": 2016,
+ "warmup": 336,
+ "seed": 3,
+ "layout": [
+  {
+   "id": "dock",
+   "name": "Goods dock",
+   "x": 20,
+   "y": 20,
+   "w": 170,
+   "h": 100
+  },
+  {
+   "id": "rmwh",
+   "name": "Raw-material warehouse",
+   "x": 230,
+   "y": 20,
+   "w": 260,
+   "h": 120
+  },
+  {
+   "id": "disp",
+   "name": "Dispensing",
+   "x": 530,
+   "y": 20,
+   "w": 200,
+   "h": 100
+  },
+  {
+   "id": "inter",
+   "name": "Intermediate store",
+   "x": 770,
+   "y": 20,
+   "w": 230,
+   "h": 100
+  },
+  {
+   "id": "gran",
+   "name": "Granulation + drying",
+   "x": 770,
+   "y": 190,
+   "w": 230,
+   "h": 100
+  },
+  {
+   "id": "comp",
+   "name": "Compression",
+   "x": 530,
+   "y": 190,
+   "w": 200,
+   "h": 100
+  },
+  {
+   "id": "coat",
+   "name": "Coating",
+   "x": 290,
+   "y": 190,
+   "w": 200,
+   "h": 100
+  },
+  {
+   "id": "pack",
+   "name": "Packaging",
+   "x": 50,
+   "y": 190,
+   "w": 200,
+   "h": 100
+  },
+  {
+   "id": "fg",
+   "name": "Finished-goods store (QC / QA hold)",
+   "x": 50,
+   "y": 360,
+   "w": 330,
+   "h": 110
+  },
+  {
+   "id": "ship",
+   "name": "Shipping",
+   "x": 440,
+   "y": 360,
+   "w": 220,
+   "h": 110
+  }
+ ],
+ "stages": [
+  {
+   "name": "Unload at dock",
+   "kind": "process",
+   "loc": "dock",
+   "servers": 2,
+   "hours": 1.0,
+   "cv": 0.25,
+   "events": [
+    {
+     "at": "arrive",
+     "kind": "PLC",
+     "src": "Dock door sensor",
+     "text": "Door D1 open, truck present"
+    },
+    {
+     "at": "start",
+     "kind": "PLC",
+     "src": "Barcode scanner",
+     "text": "Pallet label scanned, {lot}"
+    },
+    {
+     "at": 0.5,
+     "kind": "PLC",
+     "src": "Dock scale",
+     "text": "Gross weight {w} kg (simulated)"
+    },
+    {
+     "at": "end",
+     "kind": "WMS",
+     "src": "WMS (simulated)",
+     "text": "Goods receipt registered for {lot}, stock status: quality inspection"
+    },
+    {
+     "at": "end",
+     "kind": "ERP",
+     "src": "ERP (SAP-style, simulated)",
+     "text": "Goods receipt posted against purchase order, MvT 101, into quality-inspection stock, doc {doc}"
+    }
+   ],
+   "buffer": 1000
+  },
+  {
+   "name": "Dock to warehouse",
+   "kind": "move",
+   "pool": "Forklifts",
+   "servers": 2,
+   "hours": 0.3,
+   "cv": 0.3,
+   "events": [
+    {
+     "at": "start",
+     "kind": "PLC",
+     "src": "Forklift RFID",
+     "text": "Pallet {lot} picked up at dock"
+    },
+    {
+     "at": "start",
+     "kind": "WMS",
+     "src": "WMS (simulated)",
+     "text": "Putaway transfer order created, doc {doc}"
+    },
+    {
+     "at": "end",
+     "kind": "PLC",
+     "src": "Forklift RFID",
+     "text": "Pallet {lot} set down at warehouse bin"
+    },
+    {
+     "at": "end",
+     "kind": "WMS",
+     "src": "WMS (simulated)",
+     "text": "Putaway transfer order confirmed"
+    }
+   ],
+   "buffer": 1000
+  },
+  {
+   "name": "Quarantine (waiting for QC)",
+   "kind": "wait",
+   "loc": "rmwh",
+   "hours": 16,
+   "cv": 0.3,
+   "events": [
+    {
+     "at": "arrive",
+     "kind": "WMS",
+     "src": "WMS (simulated)",
+     "text": "Bin status: quality inspection, blocked for production use"
+    }
+   ]
+  },
+  {
+   "name": "QC sampling + release",
+   "kind": "process",
+   "loc": "rmwh",
+   "servers": 2,
+   "hours": 6,
+   "cv": 0.3,
+   "window": [
+    8,
+    16
+   ],
+   "workdays": 5,
+   "events": [
+    {
+     "at": "start",
+     "kind": "QA",
+     "src": "Sampling booth",
+     "text": "Sampling started for {lot}"
+    },
+    {
+     "at": 0.5,
+     "kind": "PLC",
+     "src": "Label printer",
+     "text": "Sample labels printed"
+    },
+    {
+     "at": "end",
+     "kind": "QA",
+     "src": "LIMS (simulated)",
+     "text": "Usage decision: accepted for {lot}"
+    },
+    {
+     "at": "end",
+     "kind": "ERP",
+     "src": "ERP (SAP-style, simulated)",
+     "text": "Transfer posting quality inspection to unrestricted-use stock, MvT 321, doc {doc}"
+    },
+    {
+     "at": "end",
+     "kind": "WMS",
+     "src": "WMS (simulated)",
+     "text": "Bin status: unrestricted, available for picking"
+    }
+   ],
+   "buffer": 1000
+  },
+  {
+   "name": "Warehouse to dispensing",
+   "kind": "move",
+   "pool": "Forklifts",
+   "servers": 2,
+   "hours": 0.4,
+   "cv": 0.3,
+   "events": [
+    {
+     "at": "start",
+     "kind": "WMS",
+     "src": "WMS (simulated)",
+     "text": "Transfer order created: pick {lot} for dispensing, doc {doc}"
+    },
+    {
+     "at": "start",
+     "kind": "PLC",
+     "src": "Forklift RFID",
+     "text": "Pallet {lot} picked up at warehouse bin"
+    },
+    {
+     "at": "end",
+     "kind": "PLC",
+     "src": "Forklift RFID",
+     "text": "Pallet {lot} set down at dispensing"
+    },
+    {
+     "at": "end",
+     "kind": "WMS",
+     "src": "WMS (simulated)",
+     "text": "Transfer order confirmed"
+    }
+   ],
+   "buffer": 1000
+  },
+  {
+   "name": "Dispensing",
+   "kind": "process",
+   "loc": "disp",
+   "hours": 6,
+   "cv": 0.15,
+   "changeover": 3,
+   "events": [
+    {
+     "at": "start",
+     "kind": "PLC",
+     "src": "Dispensing scale",
+     "text": "Tare done, dispensing started for {lot}"
+    },
+    {
+     "at": 0.5,
+     "kind": "PLC",
+     "src": "Dispensing scale",
+     "text": "Target weight reached within tolerance (simulated)"
+    },
+    {
+     "at": 0.9,
+     "kind": "PLC",
+     "src": "Container labeller",
+     "text": "Container labels printed"
+    },
+    {
+     "at": "end",
+     "kind": "ERP",
+     "src": "ERP (SAP-style, simulated)",
+     "text": "Goods issue to production order, MvT 261, doc {doc}"
+    }
+   ],
+   "buffer": 1000
+  },
+  {
+   "name": "Dispensing to intermediate store",
+   "kind": "move",
+   "pool": "Forklifts",
+   "servers": 2,
+   "hours": 0.3,
+   "cv": 0.3,
+   "events": [
+    {
+     "at": "start",
+     "kind": "PLC",
+     "src": "Forklift RFID",
+     "text": "Dispensed material {lot} picked up"
+    },
+    {
+     "at": "end",
+     "kind": "PLC",
+     "src": "Forklift RFID",
+     "text": "Dispensed material {lot} set down in intermediate store"
+    },
+    {
+     "at": "end",
+     "kind": "WMS",
+     "src": "WMS (simulated)",
+     "text": "Putaway to staging confirmed"
+    }
+   ],
+   "buffer": 1000
+  },
+  {
+   "name": "Staging in intermediate store",
+   "kind": "wait",
+   "loc": "inter",
+   "hours": 3,
+   "cv": 0.5,
+   "events": [
+    {
+     "at": "arrive",
+     "kind": "WMS",
+     "src": "WMS (simulated)",
+     "text": "Material {lot} in staging area, waiting for production slot"
+    }
+   ]
+  },
+  {
+   "name": "Store to granulation",
+   "kind": "move",
+   "pool": "Forklifts",
+   "servers": 2,
+   "hours": 0.4,
+   "cv": 0.3,
+   "events": [
+    {
+     "at": "start",
+     "kind": "WMS",
+     "src": "WMS (simulated)",
+     "text": "Transfer order created: staging to granulation, doc {doc}"
+    },
+    {
+     "at": "start",
+     "kind": "PLC",
+     "src": "Forklift RFID",
+     "text": "Material {lot} picked up"
+    },
+    {
+     "at": "end",
+     "kind": "PLC",
+     "src": "Forklift RFID",
+     "text": "Material {lot} delivered to granulation"
+    }
+   ],
+   "buffer": 1000
+  },
+  {
+   "name": "Granulation + drying",
+   "kind": "process",
+   "loc": "gran",
+   "hours": 9,
+   "cv": 0.15,
+   "changeover": 6,
+   "breakdown_p": 0.08,
+   "repair": 6,
+   "events": [
+    {
+     "at": "start",
+     "kind": "PLC",
+     "src": "Granulator",
+     "text": "Run started, recipe loaded for {p}"
+    },
+    {
+     "at": 0.4,
+     "kind": "PLC",
+     "src": "Dryer",
+     "text": "Inlet air temperature in range (simulated)"
+    },
+    {
+     "at": "end",
+     "kind": "PLC",
+     "src": "Granulator",
+     "text": "Run complete"
+    },
+    {
+     "at": "end",
+     "kind": "ERP",
+     "src": "ERP (SAP-style, simulated)",
+     "text": "Production order confirmation: granulation operation, doc {doc}"
+    }
+   ],
+   "buffer": 1000
+  },
+  {
+   "name": "Granulation to compression",
+   "kind": "move",
+   "pool": "Forklifts",
+   "servers": 2,
+   "hours": 0.3,
+   "cv": 0.3,
+   "events": [
+    {
+     "at": "start",
+     "kind": "PLC",
+     "src": "Forklift RFID",
+     "text": "Granulate {lot} picked up"
+    },
+    {
+     "at": "end",
+     "kind": "PLC",
+     "src": "Forklift RFID",
+     "text": "Granulate {lot} delivered to compression"
+    }
+   ],
+   "buffer": 1000
+  },
+  {
+   "name": "Compression",
+   "kind": "process",
+   "loc": "comp",
+   "servers": 2,
+   "hours": 10,
+   "cv": 0.2,
+   "changeover": 8,
+   "breakdown_p": 0.1,
+   "repair": 5,
+   "events": [
+    {
+     "at": "start",
+     "kind": "PLC",
+     "src": "Tablet press",
+     "text": "Press started, product {p}"
+    },
+    {
+     "at": 0.33,
+     "kind": "PLC",
+     "src": "Checkweigher",
+     "text": "In-process weight check passed (simulated)"
+    },
+    {
+     "at": 0.66,
+     "kind": "PLC",
+     "src": "Checkweigher",
+     "text": "In-process weight check passed (simulated)"
+    },
+    {
+     "at": "end",
+     "kind": "PLC",
+     "src": "Tablet press",
+     "text": "Run complete"
+    },
+    {
+     "at": "end",
+     "kind": "ERP",
+     "src": "ERP (SAP-style, simulated)",
+     "text": "Production order confirmation: compression operation, doc {doc}"
+    }
+   ],
+   "buffer": 1000
+  },
+  {
+   "name": "Compression to coating",
+   "kind": "move",
+   "pool": "Forklifts",
+   "servers": 2,
+   "hours": 0.3,
+   "cv": 0.3,
+   "events": [
+    {
+     "at": "start",
+     "kind": "PLC",
+     "src": "Forklift RFID",
+     "text": "Tablet container {lot} picked up"
+    },
+    {
+     "at": "end",
+     "kind": "PLC",
+     "src": "Forklift RFID",
+     "text": "Tablet container {lot} delivered to coating"
+    }
+   ],
+   "buffer": 1000
+  },
+  {
+   "name": "Coating",
+   "kind": "process",
+   "loc": "coat",
+   "hours": 11,
+   "cv": 0.15,
+   "changeover": 6,
+   "breakdown_p": 0.06,
+   "repair": 4,
+   "events": [
+    {
+     "at": "start",
+     "kind": "PLC",
+     "src": "Coating pan",
+     "text": "Spray started"
+    },
+    {
+     "at": "end",
+     "kind": "PLC",
+     "src": "Coating pan",
+     "text": "Spray finished, drying done"
+    },
+    {
+     "at": "end",
+     "kind": "ERP",
+     "src": "ERP (SAP-style, simulated)",
+     "text": "Production order confirmation: coating operation, doc {doc}"
+    }
+   ],
+   "buffer": 1000
+  },
+  {
+   "name": "Coating to packaging",
+   "kind": "move",
+   "pool": "Forklifts",
+   "servers": 2,
+   "hours": 0.3,
+   "cv": 0.3,
+   "events": [
+    {
+     "at": "start",
+     "kind": "PLC",
+     "src": "Forklift RFID",
+     "text": "Coated tablets {lot} picked up"
+    },
+    {
+     "at": "end",
+     "kind": "PLC",
+     "src": "Forklift RFID",
+     "text": "Coated tablets {lot} delivered to packaging"
+    }
+   ],
+   "buffer": 1000
+  },
+  {
+   "name": "Packaging",
+   "kind": "process",
+   "loc": "pack",
+   "servers": 2,
+   "hours": 9,
+   "cv": 0.2,
+   "changeover": 5,
+   "breakdown_p": 0.1,
+   "repair": 3,
+   "events": [
+    {
+     "at": "start",
+     "kind": "PLC",
+     "src": "Blister line",
+     "text": "Line started for {p}"
+    },
+    {
+     "at": 0.2,
+     "kind": "PLC",
+     "src": "Serialization camera",
+     "text": "Serial numbers assigned and verified for bundle (simulated)"
+    },
+    {
+     "at": 0.4,
+     "kind": "PLC",
+     "src": "Carton conveyor",
+     "text": "Conveyor running"
+    },
+    {
+     "at": 0.5,
+     "kind": "PLC",
+     "src": "Case labeller",
+     "text": "Case label applied"
+    },
+    {
+     "at": 0.58,
+     "kind": "PLC",
+     "src": "Palletizer",
+     "text": "State: running, pattern 5 layers x 12 cases (simulated)"
+    },
+    {
+     "at": 0.6,
+     "to": 0.8,
+     "n": 5,
+     "kind": "PLC",
+     "src": "Palletizer robot",
+     "text": "Picking layer {i} of {n}, vacuum gripper OK"
+    },
+    {
+     "at": 0.64,
+     "to": 0.84,
+     "n": 5,
+     "kind": "PLC",
+     "src": "Palletizer robot",
+     "text": "Layer {i} of {n} placed: 12 cases, interlocked pattern"
+    },
+    {
+     "at": 0.8,
+     "kind": "PLC",
+     "src": "Palletizer",
+     "text": "State: pallet complete, 60 cases"
+    },
+    {
+     "at": 0.85,
+     "kind": "PLC",
+     "src": "Stretch wrapper",
+     "text": "Pallet wrapped"
+    },
+    {
+     "at": 0.9,
+     "kind": "PLC",
+     "src": "Pallet labeller",
+     "text": "Pallet label printed with serial shipping container code (GS1 concept, simulated)"
+    },
+    {
+     "at": 0.95,
+     "kind": "PLC",
+     "src": "Aggregation",
+     "text": "Case-to-pallet aggregation reported to serialization system"
+    },
+    {
+     "at": "end",
+     "kind": "ERP",
+     "src": "ERP (SAP-style, simulated)",
+     "text": "Backflush: components consumed (simulated), doc {doc}"
+    },
+    {
+     "at": "end",
+     "kind": "ERP",
+     "src": "ERP (SAP-style, simulated)",
+     "text": "Goods receipt for production order, MvT 101, into quality-inspection stock, doc {doc}"
+    }
+   ],
+   "buffer": 1000
+  },
+  {
+   "name": "Packaging to finished-goods store",
+   "kind": "move",
+   "pool": "Forklifts",
+   "servers": 2,
+   "hours": 0.4,
+   "cv": 0.3,
+   "events": [
+    {
+     "at": "start",
+     "kind": "PLC",
+     "src": "Forklift RFID",
+     "text": "Pallet {lot} picked up at packaging"
+    },
+    {
+     "at": "start",
+     "kind": "WMS",
+     "src": "WMS (simulated)",
+     "text": "Putaway transfer order created, doc {doc}"
+    },
+    {
+     "at": "end",
+     "kind": "PLC",
+     "src": "Forklift RFID",
+     "text": "Pallet {lot} set down in finished-goods store"
+    },
+    {
+     "at": "end",
+     "kind": "WMS",
+     "src": "WMS (simulated)",
+     "text": "Putaway confirmed, status: quality inspection"
+    }
+   ],
+   "buffer": 1000
+  },
+  {
+   "name": "QC lab release testing",
+   "kind": "process",
+   "loc": "fg",
+   "servers": 3,
+   "hours": 14,
+   "cv": 0.3,
+   "window": [
+    8,
+    17
+   ],
+   "workdays": 5,
+   "retest_p": 0.04,
+   "events": [
+    {
+     "at": "start",
+     "kind": "QA",
+     "src": "LIMS (simulated)",
+     "text": "Samples received for {lot}"
+    },
+    {
+     "at": "end",
+     "kind": "QA",
+     "src": "LIMS (simulated)",
+     "text": "Results approved for {lot}"
+    }
+   ],
+   "buffer": 1000
+  },
+  {
+   "name": "Deviation investigation (QA hold)",
+   "kind": "hold",
+   "loc": "fg",
+   "p": 0.15,
+   "hours": 48,
+   "cv": 0.5,
+   "window": [
+    9,
+    16
+   ],
+   "workdays": 5,
+   "reject_p": 0.3,
+   "events": [
+    {
+     "at": "arrive",
+     "kind": "QA",
+     "src": "QA (simulated)",
+     "text": "Deviation raised for {lot}: investigation opened"
+    },
+    {
+     "at": "arrive",
+     "kind": "WMS",
+     "src": "WMS (simulated)",
+     "text": "Pallet {lot} status: blocked (quality hold)"
+    },
+    {
+     "at": "end",
+     "kind": "QA",
+     "src": "QA (simulated)",
+     "text": "Investigation closed for {lot}: batch accepted",
+     "if": "ok"
+    },
+    {
+     "at": "end",
+     "kind": "QA",
+     "src": "QA (simulated)",
+     "text": "Investigation closed for {lot}: batch REJECTED",
+     "if": "rejected"
+    },
+    {
+     "at": "end",
+     "kind": "WMS",
+     "src": "WMS (simulated)",
+     "text": "Pallet {lot} moved to rejected stock for disposal (simulated)",
+     "if": "rejected"
+    }
+   ]
+  },
+  {
+   "name": "QA record review",
+   "kind": "process",
+   "loc": "fg",
+   "hours": 3,
+   "cv": 0.3,
+   "window": [
+    9,
+    16
+   ],
+   "workdays": 5,
+   "events": [
+    {
+     "at": "start",
+     "kind": "QA",
+     "src": "QA (simulated)",
+     "text": "Batch record review started"
+    },
+    {
+     "at": "end",
+     "kind": "QA",
+     "src": "QA (simulated)",
+     "text": "Batch disposition: released"
+    },
+    {
+     "at": "end",
+     "kind": "ERP",
+     "src": "ERP (SAP-style, simulated)",
+     "text": "Transfer posting quality inspection to unrestricted-use stock, MvT 321, doc {doc}"
+    }
+   ],
+   "buffer": 1000
+  },
+  {
+   "name": "Store to shipping",
+   "kind": "move",
+   "pool": "Forklifts",
+   "servers": 2,
+   "hours": 0.3,
+   "cv": 0.3,
+   "events": [
+    {
+     "at": "start",
+     "kind": "WMS",
+     "src": "WMS (simulated)",
+     "text": "Outbound transfer order created, doc {doc}"
+    },
+    {
+     "at": "start",
+     "kind": "PLC",
+     "src": "Forklift RFID",
+     "text": "Pallet {lot} picked up for shipping"
+    },
+    {
+     "at": "end",
+     "kind": "PLC",
+     "src": "Forklift RFID",
+     "text": "Pallet {lot} set down at shipping door"
+    }
+   ],
+   "buffer": 1000
+  },
+  {
+   "name": "Dispatch",
+   "kind": "wave",
+   "loc": "ship",
+   "waves": [
+    10,
+    15
+   ],
+   "events": [
+    {
+     "at": "arrive",
+     "kind": "ERP",
+     "src": "ERP (SAP-style, simulated)",
+     "text": "Outbound delivery created, doc {doc}"
+    },
+    {
+     "at": "end",
+     "kind": "PLC",
+     "src": "Scanner at truck door",
+     "text": "Pallet {lot} scanned onto truck"
+    },
+    {
+     "at": "end",
+     "kind": "ERP",
+     "src": "ERP (SAP-style, simulated)",
+     "text": "Goods issue posted for outbound delivery, doc {doc}"
+    },
+    {
+     "at": "end",
+     "kind": "PLC",
+     "src": "Dock door sensor",
+     "text": "Truck departed"
+    }
+   ]
+  }
+ ],
+ "m_per_px": 0.3,
+ "speed_kmh": 6,
+ "handling_min": 6,
+ "due_h": {
+  "A": 150,
+  "B": 250,
+  "C": 400
+ },
+ "dispatch": "edd"
+}

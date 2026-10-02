@@ -257,8 +257,12 @@ The wear rule is this code's own assumption, not taken from any source, and all 
 
 ## One-command offline demo (M34)
 
-`python3 -m plantsim.demo demo_out` runs the CLI on the bundled synthetic examples and writes all 18 HTML pages plus `demo_out/index.html` (no network, no dependencies). Fictitious plant; example values are illustrative placeholders. `tests/test_demo.py` checks that every flag used in the README exists in `cli.py` and that all pages are produced.
+`python3 -m plantsim.demo demo_out` runs the CLI on the bundled synthetic examples and writes all 19 HTML pages plus `demo_out/index.html` (no network, no dependencies). Fictitious plant; example values are illustrative placeholders. `tests/test_demo.py` checks that every flag used in the README exists in `cli.py` and that all pages are produced.
 
 ## Pareto of lost hours (M35)
 
 `python -m plantsim.cli examples/pm_b.json --pareto-view pareto.html` ranks loss causes per stage (repair, setup, PM, blocked, material wait) in resource-hours, with the cumulative line and an 80% marker. Concept as read at https://pmc.ncbi.nlm.nih.gov/articles/PMC10228985/ (2 Oct 2026). Hours, not money; queue waiting and idle time are not counted as losses. Example values are illustrative placeholders: in this example setup dominates only because of the placeholder changeover times.
+
+## Due dates and EDD dispatch (M37)
+
+Plant keys `due_h` (hours after release, a number or `{product: hours}`) and `dispatch: "edd"` (earliest due date first, event-driven engine). `python -m plantsim.cli examples/due_fifo.json --whatif examples/due_edd.json --seeds 20 --whatif-view due.html` compares FIFO with EDD and adds tardy share, mean tardiness and maximum lateness (lateness = completion minus due date, as defined in the UCSB scheduling notes, https://sites.cs.ucsb.edu/~suri/ccs130a/Scheduling.pdf, read 2 Oct 2026; those notes state that EDD minimises the maximum lateness on a single machine). In this plant, with several stages, queues that fill up and changeovers, that result is not guaranteed: only the simulation shows it. Due dates in the examples are placeholders and the plant is overloaded by them (most lots tardy). Not modelled: customer priorities, due-date setting rules, expediting, partial deliveries.
