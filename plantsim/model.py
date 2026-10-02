@@ -35,6 +35,8 @@ class Stage:
     buffer: Optional[int] = None    # max lots waiting in front of a process/move stage (None = unlimited). With a limit, a finished lot stays in its resource (blocked) until there is room
     capacity: Optional[int] = None  # kind "wait": max lots resting at once (e.g. quarantine rack positions). None = unlimited. A wait with a capacity is modelled as a process stage with that many resources (no changeover, no breakdowns)
     breaks: Optional[list] = None   # daily gaps [[from_hour, to_hour], ...] (lunch, shift handover): no NEW lot starts inside a gap; a lot already running is not interrupted
+    shortage_p: float = 0.0         # process stages: chance that the material for a lot is not there when its turn comes (the resource then waits, idle, not counted as working)
+    shortage_hours: float = 0.0     # mean wait for the missing material (h)
     events: Optional[list] = None   # signal/transaction templates for the event layer (used by the browser view)
 
 
@@ -61,6 +63,8 @@ class Plant:
                 if s.kind != "wait" or s.capacity < 1:
                     raise ValueError(f"{s.name}: capacity must be >= 1 and only applies to wait stages")
                 s.kind, s.servers = "process", s.capacity
+            if not 0 <= s.shortage_p <= 1 or s.shortage_hours < 0 or (s.shortage_p > 0 and s.kind != "process"):
+                raise ValueError(f"{s.name}: shortage_p must be 0..1, shortage_hours >= 0, and only applies to process stages")
             if s.servers < 1:
                 raise ValueError(f"{s.name}: servers must be >= 1")
             if s.buffer is not None and (s.buffer < 0 or s.kind not in ("process", "move")):
@@ -120,6 +124,8 @@ class StageStat:
     batches: int = 0
     max_queue_wait: float = 0.0
     blocked: float = 0.0           # resource-hours spent holding a finished lot because the next stage's buffer was full
+    short_lots: int = 0            # lots that had to wait for material (inside the window)
+    short_hours: float = 0.0       # resource-hours spent waiting for material (inside the window)
     max_queue: int = 0             # largest number of lots waiting in front of the stage (event-driven engine only)
 
 
@@ -301,6 +307,12 @@ def simulate_fifo(plant: Plant) -> Result:
                 credit("setup", st, cur, cur + s.changeover)
                 cur += s.changeover
             last[key][j] = b.product
+            if s.shortage_p and rng.random() < s.shortage_p:
+                m = _gamma(rng, s.shortage_hours, 0.5)
+                if w0 <= cur < w1:
+                    st.short_lots += 1
+                    st.short_hours += m
+                cur += m
             pstart = cur
             dur = _gamma(rng, s.hours, s.cv)
             while True:
@@ -449,6 +461,12 @@ def simulate_des(plant: Plant) -> Result:
                 credit("setup", k, cur, cur + s.changeover)
                 cur += s.changeover
             u["last"] = b.product
+            if s.shortage_p and rng.random() < s.shortage_p:
+                m = _gamma(rng, s.shortage_hours, 0.5)
+                if w0 <= cur < w1:
+                    stats[k].short_lots += 1
+                    stats[k].short_hours += m
+                cur += m
             rec[2] = cur
             dur = _gamma(rng, s.hours, s.cv)
             while True:

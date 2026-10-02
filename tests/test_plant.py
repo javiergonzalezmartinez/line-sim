@@ -230,3 +230,33 @@ class BreakTests(unittest.TestCase):
         for b in ([[5, 5]], [[-1, 2]], [[20, 25]]):
             with self.assertRaises(ValueError):
                 plant([Stage("S", "process", hours=1, breaks=b)])
+
+
+class ShortageTests(unittest.TestCase):
+    def lead_h(self, **k):
+        r = simulate(plant([Stage("S", "process", hours=2, cv=0, **k)], rel=24))
+        return r.mean_lead_time_days * 24, r
+
+    def test_no_shortage_is_unchanged(self):
+        self.assertAlmostEqual(self.lead_h()[0], 2.0, delta=0.001)
+
+    def test_every_lot_waits_the_mean_missing_time(self):
+        h, r = self.lead_h(shortage_p=1.0, shortage_hours=5.0)
+        self.assertAlmostEqual(h, 7.0, delta=0.8)
+        self.assertGreater(r.stats[0].short_lots, 100)
+        self.assertAlmostEqual(r.stats[0].short_hours / r.stats[0].short_lots, 5.0, delta=0.8)
+
+    def test_material_wait_is_not_counted_as_working_time(self):
+        _, r = self.lead_h(shortage_p=1.0, shortage_hours=5.0)
+        self.assertAlmostEqual(r.utilisation(r.stats[0])["process"], 2 / 24, delta=0.005)
+
+    def test_shortage_in_the_event_engine_too(self):
+        r = simulate(plant([Stage("S", "process", hours=2, cv=0, shortage_p=1.0, shortage_hours=5.0, buffer=2)], rel=24))
+        self.assertAlmostEqual(r.mean_lead_time_days * 24, 7.0, delta=0.8)
+        self.assertGreater(r.stats[0].short_lots, 100)
+
+    def test_invalid_shortage_is_rejected(self):
+        with self.assertRaises(ValueError):
+            plant([Stage("S", "process", hours=1, shortage_p=1.5)])
+        with self.assertRaises(ValueError):
+            plant([Stage("S", "wait", hours=1, shortage_p=0.5)])

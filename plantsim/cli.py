@@ -21,7 +21,7 @@ def main(argv=None):
         if sg.kind == 'hold':
             continue
         u = r.utilisation(st); n = max(st.batches, 1)
-        print(f"  {st.name:<28} proc {u['process']:5.0%} setup {u['setup']:5.0%} repair {u['repair']:5.0%}  mean wait {st.wait/n:6.1f} h")
+        print(f"  {st.name:<28} proc {u['process']:5.0%} setup {u['setup']:5.0%} repair {u['repair']:5.0%}  mean wait {st.wait/n:6.1f} h" + (f"  material waits {st.short_lots} lots, {st.short_hours:.0f} h" if st.short_lots else ""))
     for n, u in r.pool_utilisation(p).items():
         print(f"  pool {n}: busy {u:.0%}")
     if a.view:

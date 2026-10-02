@@ -9,7 +9,7 @@ function nextOpen(t,s){for(let i=0;i<50;i++){t=nextWindow(t,s);let moved=false;f
 function nextWave(t,w){const day=Math.floor(t/24),ws=[...w].sort((a,b)=>a-b);for(let d=day;d<day+8;d++)for(const x of ws)if(d*24+x>=t)return d*24+x;return t}
 function resolveMoves(P){if(!(P.layout&&P.m_per_px>0))return;const pos={};P.layout.forEach(l=>pos[l.id]=[l.x+l.w/2,l.y+l.h/2]);
   P.stages.forEach((s,i)=>{if(s.kind==="move"){const a=pos[P.stages[i-1].loc],b=pos[P.stages[i+1].loc],m=(Math.abs(a[0]-b[0])+Math.abs(a[1]-b[1]))*P.m_per_px;s.hours=(m/((P.speed_kmh||6)*1000/60)+(P.handling_min==null?6:P.handling_min))/60}})}
-function simulate(P){resolveMoves(P);P.stages.forEach(s=>{for(const [a,b] of (s.breaks||[]))if(!(a>=0&&a<b&&b<=24))throw new Error(s.name+": each break must satisfy 0 <= from < to <= 24")});P.stages.forEach(s=>{if(s.capacity!=null){if(s.kind!=="wait"||s.capacity<1)throw new Error(s.name+": capacity must be >= 1 and only applies to wait stages");s.kind="process";s.servers=s.capacity}});if(P.stages.some(x=>x.buffer!=null))return simulateDES(P);
+function simulate(P){resolveMoves(P);P.stages.forEach(s=>{if(s.shortage_p!=null&&(!(s.shortage_p>=0&&s.shortage_p<=1)||(s.shortage_p>0&&s.kind!=="process"&&s.capacity==null)))throw new Error(s.name+": shortage_p must be 0..1 and only applies to process stages")});P.stages.forEach(s=>{for(const [a,b] of (s.breaks||[]))if(!(a>=0&&a<b&&b<=24))throw new Error(s.name+": each break must satisfy 0 <= from < to <= 24")});P.stages.forEach(s=>{if(s.capacity!=null){if(s.kind!=="wait"||s.capacity<1)throw new Error(s.name+": capacity must be >= 1 and only applies to wait stages");s.kind="process";s.servers=s.capacity}});if(P.stages.some(x=>x.buffer!=null))return simulateDES(P);
   const rng=makeRng(P.seed||1),S=P.stages,n=S.length,keys=S.map((s,k)=>s.pool||String(k));
   const free={},last={};keys.forEach((key,k)=>{if(!free[key]){free[key]=Array(S[k].servers||1).fill(0);last[key]=Array(S[k].servers||1).fill(null)}});
   const st=S.map(s=>({busy:0,setup:0,repair:0,wait:0,n:0}));const w0=P.warmup,w1=P.horizon;
@@ -31,7 +31,7 @@ function simulate(P){resolveMoves(P);P.stages.forEach(s=>{for(const [a,b] of (s.
     else{const key=keys[k],f=free[key];let j=0;for(let x=1;x<f.length;x++)if(f[x]<f[j])j=x;
       const start=nextOpen(Math.max(at,f[j]),s);wait=start-at;let cur=start;
       if(last[key][j]!==null&&last[key][j]!==b.p&&(s.changeover||0)>0){credit("setup",k,cur,cur+s.changeover);cur+=s.changeover}
-      last[key][j]=b.p;ps=cur;const cv=s.cv==null?0.1:s.cv;let dur=rng.gamma(s.hours,cv);
+      last[key][j]=b.p;if(s.shortage_p&&rng.u()<s.shortage_p)cur+=rng.gamma(s.shortage_hours||0,0.5);ps=cur;const cv=s.cv==null?0.1:s.cv;let dur=rng.gamma(s.hours,cv);
       for(;;){credit("busy",k,cur,cur+dur);cur+=dur;
         if(s.breakdown_p&&rng.u()<s.breakdown_p){const r=rng.gamma(s.repair,0.5);credit("repair",k,cur,cur+r);cur+=r}
         if(s.retest_p&&rng.u()<s.retest_p){dur=rng.gamma(s.hours,cv);continue}break}
@@ -75,7 +75,7 @@ function simulateDES(P){
       const k=best[1],[,i]=queue[k].shift();let u=idle[0];for(const x of idle)if(x.free_at<u.free_at)u=x;
       const b=batches[i],s=S[k],rec=cur[i],wait=now-rec[1];let c=now;
       if(u.last!==null&&u.last!==b.p&&(s.changeover||0)>0){credit("setup",k,c,c+s.changeover);c+=s.changeover}
-      u.last=b.p;rec[2]=c;let dur=rng.gamma(s.hours,cv(s));
+      u.last=b.p;if(s.shortage_p&&rng.u()<s.shortage_p)c+=rng.gamma(s.shortage_hours||0,0.5);rec[2]=c;let dur=rng.gamma(s.hours,cv(s));
       for(;;){credit("busy",k,c,c+dur);c+=dur;if(s.breakdown_p&&rng.u()<s.breakdown_p){const r=rng.gamma(s.repair,0.5);credit("repair",k,c,c+r);c+=r}
         if(s.retest_p&&rng.u()<s.retest_p){dur=rng.gamma(s.hours,cv(s));continue}break}
       rec[3]=rec[4]=c;if(rec[1]>=w0&&rec[1]<w1){st[k].wait+=wait;st[k].n++}

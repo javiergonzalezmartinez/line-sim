@@ -80,3 +80,10 @@ test('daily breaks delay starts but never interrupt a running lot (JS)', () => {
   assert.ok(Math.abs(simulate(mk(5, [[1, 2]])).leadDays * 24 - 5) < 0.01);
   assert.throws(() => simulate(mk(1, [[5, 5]])));
 });
+
+test('material shortage delays the start but is not working time (JS, both engines)', () => {
+  const mk = buf => ({ stages: [Object.assign({ name: 'S', kind: 'process', hours: 2, cv: 0, shortage_p: 1, shortage_hours: 5 }, buf ? { buffer: 2 } : {})], products: ['A'], release_every: 24, horizon: 24 * 7 * 20, warmup: 24 * 7 * 2, seed: 1 });
+  assert.ok(Math.abs(simulate(mk(false)).leadDays * 24 - 7) < 0.8);
+  assert.ok(Math.abs(simulate(mk(true)).leadDays * 24 - 7) < 0.8);
+  assert.throws(() => simulate({ stages: [{ name: 'x', kind: 'wave', waves: [8], shortage_p: 0.5 }], products: ['A'], release_every: 10, horizon: 500, warmup: 0 }));
+});
