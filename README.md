@@ -257,7 +257,7 @@ The wear rule is this code's own assumption, not taken from any source, and all 
 
 ## One-command offline demo (M34)
 
-`python3 -m plantsim.demo demo_out` runs the CLI on the bundled synthetic examples and writes all 20 HTML pages plus `demo_out/index.html` (no network, no dependencies). Fictitious plant; example values are illustrative placeholders. `tests/test_demo.py` checks that every flag used in the README exists in `cli.py` and that all pages are produced.
+`python3 -m plantsim.demo demo_out` runs the CLI on the bundled synthetic examples and writes all 21 HTML pages plus `demo_out/index.html` (no network, no dependencies). Fictitious plant; example values are illustrative placeholders. `tests/test_demo.py` checks that every flag used in the README exists in `cli.py` and that all pages are produced.
 
 ## Pareto of lost hours (M35)
 
@@ -270,3 +270,7 @@ Plant keys `due_h` (hours after release, a number or `{product: hours}`) and `di
 ## Queue rules: SPT and critical ratio (M38)
 
 `dispatch` also accepts `spt` (shortest process time at the stage first) and `cr` (smallest critical ratio, time left to the due date over remaining process work, first). Plant key `hours_factor` ({product: factor}) scales process times per product in the event-driven engine; without different factors SPT equals FIFO and CR equals EDD (tests check the SPT case). `python -m plantsim.cli examples/rules.json --rules-sweep rules.html --seeds 10` compares FIFO, EDD, SPT and CR on the same seeds with 95% CI. Definitions as read at https://www.uky.edu/~dsianita/300/schedule.html and https://metricgate.com/docs/critical-ratio-dispatch-rule/ (2 Oct 2026). Remaining work counts nominal process hours only (no queues, changeovers, moves). Factors and due dates are placeholders. Not modelled: setup-aware variants, release control, due-date setting rules.
+
+## Warm-up check with Welch's moving average (M41)
+
+`python -m plantsim.cli examples/pharma_flow.json --warmup-view warmup.html --seeds 10 --welch-window 7` simulates the plant with warm-up 0 over several replications, averages work in progress and lots finished per day (trailing 7-day mean) across them and smooths with a symmetric moving average (window 2w+1, shrinking at the start). Procedure as read at https://hsma-tools.github.io/vidigi/reference/analysis.welch_moving_average.html (cites Law) and https://pythonhealthdatascience.github.io/des_rap_book/pages/guide/output_analysis/length_warmup.html (2 Oct 2026; at least 5 replications). The "settles" marker is a rule of this code (smoothed curve stays within 5% of the mean of its last quarter), not from the sources. In the pharma_flow example WIP settles around day 14, which matches the configured warm-up, but the output rate only settles around day 23: the configured warm-up is a little short for throughput-based results. Not modelled: per-product series, a statistical end-of-transient test.

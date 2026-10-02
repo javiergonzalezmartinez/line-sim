@@ -22,6 +22,7 @@ PAGES = [
  ("guard.html", "Dispatch wait-guard sweep", "examples/dispatch_same_product.json", ["--dispatch-sweep"]),
  ("due.html", "Due dates: FIFO vs earliest-due-date-first", "examples/due_fifo.json", ["--whatif", "examples/due_edd.json", "--seeds", "20", "--whatif-view"]),
  ("rules.html", "Queue rules: FIFO, EDD, SPT, critical ratio", "examples/rules.json", ["--seeds", "10", "--rules-sweep"]),
+ ("warmup.html", "Warm-up check (Welch)", "examples/pharma_flow.json", ["--seeds", "10", "--warmup-view"]),
  ("pareto.html", "Pareto of lost hours", "examples/pm_b.json", ["--pareto-view"]),
  ("pm.html", "Preventive maintenance what-if", "examples/pm_a.json", ["--whatif", "examples/pm_b.json", "--seeds", "20", "--whatif-view"]),
 ]
