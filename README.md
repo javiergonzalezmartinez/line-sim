@@ -21,11 +21,11 @@ Everything is **synthetic**: no real plant, company or personal data. Parameters
 | ![Handling units](docs/img/m16_handling.png) **Handling units and pallets** | ![Fleet](docs/img/m17_fleet.png) **Forklift/AGV fleet** sizing |
 | ![Quality](docs/img/m18_quality.png) **Quality holds and rejections** | ![Process value](docs/img/m21_process.png) **Process value with deadband** |
 | ![Material](docs/img/m10_material.png) **Material shortages** | ![Faults](docs/img/m22_faults.png) **Injected sensor faults and excursions** |
-| ![What-if](docs/img/m23_whatif.png) **What-if A vs B** with 95% confidence intervals | |
+| ![What-if](docs/img/m23_whatif.png) **What-if A vs B** with 95% confidence intervals | ![Replay export](docs/img/m24_mqtt.png) **Sparkplug-style messages** and OPC UA-style nodes |
 
 ## Milestones
 
-M1-M6 line simulator, plant model, signal layer, finite buffers and blocking. M7 buffer size 0. M8 capacity on wait stages. M9 shifts and breaks. M10 material shortages. M11 canonical events and schema validator. M12 8 state machines. M13 machine signals. M14 KPIs. M15 interface handshakes and a seed scenario. M16 handling units and pallets. M17 forklift/AGV transport. M18 quality status. M19 live dashboard. M21 analog process values. M22 fault injection (drift, step, stochastic excursion, calibration overdue). M23 what-if comparator with confidence intervals. Each one has tests and a section below.
+M1-M6 line simulator, plant model, signal layer, finite buffers and blocking. M7 buffer size 0. M8 capacity on wait stages. M9 shifts and breaks. M10 material shortages. M11 canonical events and schema validator. M12 8 state machines. M13 machine signals. M14 KPIs. M15 interface handshakes and a seed scenario. M16 handling units and pallets. M17 forklift/AGV transport. M18 quality status. M19 live dashboard. M21 analog process values. M22 fault injection (drift, step, stochastic excursion, calibration overdue). M23 what-if comparator with confidence intervals. M24 Sparkplug-style MQTT replay and OPC UA-style node list. Each one has tests and a section below.
 
 ## What is real, illustrative, or not modelled
 
@@ -177,3 +177,11 @@ Runs scenario A (the main config) and scenario B (another config file) over N re
 The example pair is illustrative: B is A with a second coating unit. In one run of 20 seeds, throughput and lead time differ clearly, rejected lots do not. The numbers depend on the placeholder parameters and mean nothing about a real plant.
 
 Not modelled: common random numbers across different structures (the paired difference is valid but the variance reduction is not guaranteed), correction for many comparisons, stopping rules. Busiest-stage utilisation saturates at 100% in this example, so it carries no information there.
+
+## M24: MQTT replay and OPC UA-style node list (synthetic)
+
+`python -m plantsim.cli examples/pharma_flow.json --mqtt out.jsonl --opcua-nodes nodes.json --mqtt-view replay.html`
+
+Turns the telemetry events into a file of MQTT messages whose topics follow the Eclipse Sparkplug namespace, `spBv1.0/<group>/<NBIRTH|DBIRTH|DDATA|NDEATH>/<edge node>/<device>` (Sparkplug specification 2.2 and the 3.x asciidoc, read 2 Oct 2026). `seq` runs 0-255 and wraps; each device gets a DBIRTH at its first event and DDATA afterwards. Group, node, device and signal ids are synthetic.
+
+Not real Sparkplug on the wire: payloads are JSON, real Sparkplug B uses Protocol Buffers. DBIRTH here carries only the first metric seen, while the specification expects the full metric set of the device. No broker, QoS, retained flags, NCMD/DCMD or primary-host STATE. The node list (76 variable nodes in the example) is flat: NodeId in a string namespace, BrowseName, DataType. It is not an OPC UA NodeSet and no server exists. Tests check topic shape, continuous seq with wrap, birth before data per device, unique node ids and matching change counts.
