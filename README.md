@@ -257,7 +257,7 @@ The wear rule is this code's own assumption, not taken from any source, and all 
 
 ## One-command offline demo (M34)
 
-`python3 -m plantsim.demo demo_out` runs the CLI on the bundled synthetic examples and writes all 21 HTML pages plus `demo_out/index.html` (no network, no dependencies). Fictitious plant; example values are illustrative placeholders. `tests/test_demo.py` checks that every flag used in the README exists in `cli.py` and that all pages are produced.
+`python3 -m plantsim.demo demo_out` runs the CLI on the bundled synthetic examples and writes all 22 HTML pages plus `demo_out/index.html` (no network, no dependencies). Fictitious plant; example values are illustrative placeholders. `tests/test_demo.py` checks that every flag used in the README exists in `cli.py` and that all pages are produced.
 
 ## Pareto of lost hours (M35)
 
@@ -274,3 +274,7 @@ Plant keys `due_h` (hours after release, a number or `{product: hours}`) and `di
 ## Warm-up check with Welch's moving average (M41)
 
 `python -m plantsim.cli examples/pharma_flow.json --warmup-view warmup.html --seeds 10 --welch-window 7` simulates the plant with warm-up 0 over several replications, averages work in progress and lots finished per day (trailing 7-day mean) across them and smooths with a symmetric moving average (window 2w+1, shrinking at the start). Procedure as read at https://hsma-tools.github.io/vidigi/reference/analysis.welch_moving_average.html (cites Law) and https://pythonhealthdatascience.github.io/des_rap_book/pages/guide/output_analysis/length_warmup.html (2 Oct 2026; at least 5 replications). The "settles" marker is a rule of this code (smoothed curve stays within 5% of the mean of its last quarter), not from the sources. In the pharma_flow example WIP settles around day 14, which matches the configured warm-up, but the output rate only settles around day 23: the configured warm-up is a little short for throughput-based results. Not modelled: per-product series, a statistical end-of-transient test.
+
+## How many replications? (M42)
+
+`python -m plantsim.cli examples/pharma_flow.json --reps-view reps.html --max-reps 40 --precision 0.05` runs replications one after another and shows, per measure, the 95% CI half-width relative to the mean, the first number of replications under the target and the number from which it stays under it (this last one is an addition of this code). Method as read at https://pythonhealthdatascience.github.io/des_rap_book/pages/guide/output_analysis/n_reps.html (2 Oct 2026); that page cites Hoad, Robinson and Davies (2010), whose full text was not read and whose look-ahead rule is not implemented. In the example, throughput, lead time and setup hours reach 5% within about 5-6 replications, the longest queue wait needs about 13, and rare-event counts (rejected lots, repair hours) do not reach 5% within 40: the what-if pages use 20 seeds by default, enough for the first group but not for those. Not modelled: sequential stopping inside a running experiment, common random numbers.
