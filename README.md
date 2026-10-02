@@ -4,6 +4,8 @@ From a two-station line to a whole plant: discrete-event simulation of a fictiti
 
 Everything is **synthetic**: no real plant, company or personal data. Parameters the specification leaves as TBD stay TBD; the examples use values labelled **illustrative**. The "SAP-style" events are simulated, **not a real SAP integration**.
 
+Page-by-page map: [docs/OVERVIEW.md](docs/OVERVIEW.md).
+
 ## Quick start
 
     python3 -m unittest discover -s tests -t .        # Python tests
@@ -49,7 +51,7 @@ M1-M6 line simulator, plant model, signal layer, finite buffers and blocking. M7
 | Real (computed by the code) | the simulation, every event, state change, hash, KPI and count; the tests that check them |
 | Illustrative (invented, labelled) | every duration, rate, capacity-of-vehicles, failure probability and name in the examples |
 | TBD in the specification, left TBD | simulation parameters; the defaults then invent nothing (ideal handshake, no extra holds, no shipment) |
-| Not modelled (listed in the coverage table below) | 41 of 46 signals, 22 of 30 failure modes (18 once the M22 faults are configured), 12 of 26 KPIs, expiry, retests, travel to pick-up, charging |
+| Not modelled (listed in the coverage table below) | 41 of 46 signals (older count), 12 of 26 KPIs; every one of the 30 failure modes now has some layer (see the M56-M75 sections), each with its own not-modelled list, expiry, retests, travel to pick-up, charging |
 
 Rules of the project: private repository, fictitious data only, no personal or employer data, no paid services, nothing published without the owner's OK. Public sources used: ISA-88 / ISA-95 concepts, OPC UA, GS1 EPCIS, EU Annex 11, 21 CFR 11, and the public SAP Learning pages cited below.
 
