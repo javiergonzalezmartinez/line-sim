@@ -13,7 +13,7 @@ def load(path):
     return Plant(st, d["products"], d["release_every"], d.get("horizon", 2016), d.get("warmup", 336), d.get("seed", 1), d.get("layout"), d.get("m_per_px", 0.0), d.get("speed_kmh", 6.0), d.get("handling_min", 6.0))
 
 def main(argv=None):
-    ap = argparse.ArgumentParser(prog="plantsim"); ap.add_argument("config"); ap.add_argument("--view", help="write animated HTML view"); ap.add_argument("--events", help="write the canonical event log (JSONL)"); ap.add_argument("--telemetry", help="write machine telemetry sensor events (JSONL)"); ap.add_argument("--kpis", help="write KPIs computed from the event log (HTML)"); ap.add_argument("--messages", help="write interface handshake message events (JSONL); parameters from the config key \"handshake\"")
+    ap = argparse.ArgumentParser(prog="plantsim"); ap.add_argument("config"); ap.add_argument("--view", help="write animated HTML view"); ap.add_argument("--events", help="write the canonical event log (JSONL)"); ap.add_argument("--telemetry", help="write machine telemetry sensor events (JSONL)"); ap.add_argument("--kpis", help="write KPIs computed from the event log (HTML)"); ap.add_argument("--handling", help="write handling-unit and pallet events (JSONL); parameters from the config key \"handling\""); ap.add_argument("--handling-view", help="write handling-unit HTML page"); ap.add_argument("--messages", help="write interface handshake message events (JSONL); parameters from the config key \"handshake\"")
     a = ap.parse_args(argv)
     p = load(a.config); r = simulate(p)
     print(f"throughput {r.throughput_per_week:.2f} batches/week, mean lead time {r.mean_lead_time_days:.1f} days, busiest: {r.bottleneck}, rejected lots in window: {r.rejected}")
@@ -37,6 +37,15 @@ def main(argv=None):
         from .kpis import kpis, render_html
         open(a.kpis, "w", encoding="utf-8").write(render_html(kpis(p, events(p, r), telemetry(p, r))))
         print("KPI page written to", a.kpis)
+    if a.handling:
+        from .events import write_jsonl
+        from .handling import handling, handling_kpis
+        hs = handling(p, r, json.load(open(a.config, encoding="utf-8")).get("handling"))
+        print(f"{write_jsonl(hs, a.handling)} handling events written to {a.handling}; {handling_kpis(hs)}")
+    if a.handling_view:
+        from .handling import handling, render_html as hr
+        open(a.handling_view, "w", encoding="utf-8").write(hr(handling(p, r, json.load(open(a.config, encoding="utf-8")).get("handling"))))
+        print("handling page written to", a.handling_view)
     if a.messages:
         from .events import write_jsonl
         from .handshakes import messages, message_kpis

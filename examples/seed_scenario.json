@@ -73,5 +73,12 @@
    "cv": 0.2,
    "loc": "AREA-PACK-01"
   }
- ]
+ ],
+ "handling": {
+  "_note": "ILLUSTRATIVE placeholders (the spec has no values for these): 6 input HUs per lot, 4 per pallet, 2 h pallet release, 12 h to ship.",
+  "hu_per_lot": 6,
+  "hu_per_pallet": 4,
+  "release_delay_h": 2,
+  "ship_delay_h": 12
+ }
 }

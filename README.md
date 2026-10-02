@@ -74,3 +74,12 @@ A process or move stage can have `buffer`: the maximum number of lots waiting in
 - Failure catalogue: FME-009/013 (timeout), FME-011 (duplicate), FME-014 (rejection) are modelled; FME-016 is the existing `breakdown_p`. The other failure modes in `spec/failures.json` are NOT modelled.
 - `examples/seed_scenario.json`: capacities and equipment ids from the synthetic seed; every time is an illustrative placeholder. 1 lot stands in for 1 handling unit.
 - Not a real SAP or MES integration. Synthetic data only.
+
+## M16: handling units and pallets (synthetic)
+
+`python3 -m plantsim examples/seed_scenario.json --handling hu.jsonl --handling-view hu.html` emits HANDLING_UNIT state-machine events (state hashes, spec table) for every lot:
+
+- input HUs: label, quarantine, release, reserve, pick, move, consume at the first process stage, empty, closed;
+- finished pallets for lots that finish accepted: `pallet.built` (palletizing; an object event that is NOT a state change in the spec), label, quarantine, release, and load/dispatch only if `ship_delay_h` is given.
+
+Parameters (`hu_per_lot`, `hu_per_pallet`, `release_delay_h`, `ship_delay_h`) come from the `handling` key; the spec has no values, so the defaults invent nothing (1 HU per lot, no shipment) and the ones in the seed scenario are illustrative placeholders. Not modelled: incoming-material QA, partial HUs/returns, HU moves after the first one, HOLD flows (next milestones).
