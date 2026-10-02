@@ -52,10 +52,13 @@ class Plant:
     m_per_px: float = 0.0           # >0: transport time of move stages = Manhattan distance on the layout / speed + handling
     speed_kmh: float = 6.0
     handling_min: float = 6.0
+    dispatch: str = "fifo"            # queue rule of the event-driven engine: "fifo" or "same_product_first" (avoid changeovers)
 
     def __post_init__(self):
         if not self.stages or not self.products:
             raise ValueError("need stages and products")
+        if self.dispatch not in ("fifo", "same_product_first"):
+            raise ValueError("dispatch must be fifo or same_product_first")
         if self.release_every <= 0:
             raise ValueError("release_every must be > 0")
         for s in self.stages:
@@ -450,8 +453,14 @@ def simulate_des(plant: Plant) -> Result:
                     push(retry, "open", key)
                 return
             _, k = min(cand)
-            _, i = queue[k].pop(0)
             u = min(idle, key=lambda x: x["free_at"])        # the resource idle the longest (same choice as the FIFO engine)
+            pos = 0
+            if plant.dispatch == "same_product_first" and u["last"] is not None and S[k].changeover > 0:
+                for j, (_t, bi) in enumerate(queue[k]):      # oldest waiting lot of the product this unit last made
+                    if batches[bi].product == u["last"]:
+                        pos = j
+                        break
+            _, i = queue[k].pop(pos)
             b, s = batches[i], S[k]
             rec = cur_trace[i]
             start = now
