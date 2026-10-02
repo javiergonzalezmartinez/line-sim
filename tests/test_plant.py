@@ -173,3 +173,28 @@ class TBuffers(unittest.TestCase):
         for b in r.batches:
             if b.done is not None:
                 self.assertGreaterEqual(b.done - b.released, 6 - 1e-9)        # never faster than the three process times
+
+
+class CapacityTests(unittest.TestCase):
+    def tp(self, cap):
+        return simulate(plant([Stage("rack", "wait", hours=20, cv=0, capacity=cap)], rel=10)).throughput_per_week
+
+    def test_unlimited_wait_never_limits(self):
+        r = simulate(plant([Stage("rack", "wait", hours=20, cv=0)], rel=10))
+        self.assertAlmostEqual(r.throughput_per_week, 16.8, delta=0.6)
+
+    def test_one_position_caps_flow_at_one_lot_per_dwell_time(self):
+        self.assertAlmostEqual(self.tp(1), 168 / 20, delta=0.6)
+
+    def test_two_positions_carry_the_full_release_rate(self):
+        self.assertAlmostEqual(self.tp(2), 16.8, delta=0.6)
+
+    def test_capacity_builds_a_queue_in_front(self):
+        r = simulate(plant([Stage("rack", "wait", hours=20, cv=0, capacity=1)], rel=10))
+        self.assertGreater(r.stats[0].wait / max(r.stats[0].batches, 1), 20)
+
+    def test_capacity_only_on_wait_stages_and_at_least_one(self):
+        with self.assertRaises(ValueError):
+            plant([Stage("x", "process", hours=1, capacity=2)])
+        with self.assertRaises(ValueError):
+            plant([Stage("x", "wait", hours=1, capacity=0)])

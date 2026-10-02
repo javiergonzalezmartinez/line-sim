@@ -8,7 +8,7 @@ function nextOpen(t,s){if(!s.window&&(s.workdays==null||s.workdays>=7))return t;
 function nextWave(t,w){const day=Math.floor(t/24),ws=[...w].sort((a,b)=>a-b);for(let d=day;d<day+8;d++)for(const x of ws)if(d*24+x>=t)return d*24+x;return t}
 function resolveMoves(P){if(!(P.layout&&P.m_per_px>0))return;const pos={};P.layout.forEach(l=>pos[l.id]=[l.x+l.w/2,l.y+l.h/2]);
   P.stages.forEach((s,i)=>{if(s.kind==="move"){const a=pos[P.stages[i-1].loc],b=pos[P.stages[i+1].loc],m=(Math.abs(a[0]-b[0])+Math.abs(a[1]-b[1]))*P.m_per_px;s.hours=(m/((P.speed_kmh||6)*1000/60)+(P.handling_min==null?6:P.handling_min))/60}})}
-function simulate(P){resolveMoves(P);if(P.stages.some(x=>x.buffer!=null))return simulateDES(P);
+function simulate(P){resolveMoves(P);P.stages.forEach(s=>{if(s.capacity!=null){if(s.kind!=="wait"||s.capacity<1)throw new Error(s.name+": capacity must be >= 1 and only applies to wait stages");s.kind="process";s.servers=s.capacity}});if(P.stages.some(x=>x.buffer!=null))return simulateDES(P);
   const rng=makeRng(P.seed||1),S=P.stages,n=S.length,keys=S.map((s,k)=>s.pool||String(k));
   const free={},last={};keys.forEach((key,k)=>{if(!free[key]){free[key]=Array(S[k].servers||1).fill(0);last[key]=Array(S[k].servers||1).fill(null)}});
   const st=S.map(s=>({busy:0,setup:0,repair:0,wait:0,n:0}));const w0=P.warmup,w1=P.horizon;

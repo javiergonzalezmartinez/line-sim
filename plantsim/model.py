@@ -33,6 +33,7 @@ class Stage:
     p: float = 1.0                  # kind "hold": probability that a lot is held (e.g. a deviation investigation)
     reject_p: float = 0.0           # kind "hold": probability that a held lot is rejected (leaves the plant)
     buffer: Optional[int] = None    # max lots waiting in front of a process/move stage (None = unlimited). With a limit, a finished lot stays in its resource (blocked) until there is room
+    capacity: Optional[int] = None  # kind "wait": max lots resting at once (e.g. quarantine rack positions). None = unlimited. A wait with a capacity is modelled as a process stage with that many resources (no changeover, no breakdowns)
     events: Optional[list] = None   # signal/transaction templates for the event layer (used by the browser view)
 
 
@@ -55,6 +56,10 @@ class Plant:
         if self.release_every <= 0:
             raise ValueError("release_every must be > 0")
         for s in self.stages:
+            if s.capacity is not None:
+                if s.kind != "wait" or s.capacity < 1:
+                    raise ValueError(f"{s.name}: capacity must be >= 1 and only applies to wait stages")
+                s.kind, s.servers = "process", s.capacity
             if s.servers < 1:
                 raise ValueError(f"{s.name}: servers must be >= 1")
             if s.buffer is not None and (s.buffer < 0 or s.kind not in ("process", "move")):
@@ -311,7 +316,7 @@ def simulate_des(plant: Plant) -> Result:
 
     `buffer` on a process/move stage = how many lots may wait in front of it (lots in service do not count).
     When the next stage is full, a finished lot stays in its resource (the resource is blocked) until a slot opens;
-    blocked lots are released first-come first-served. Delay-only stages (wait, wave, hold) have no capacity.
+    blocked lots are released first-come first-served. Delay-only stages (wait without `capacity`, wave, hold) have no capacity.
     Same stage semantics as simulate_fifo (calendars, changeovers, breakdowns, retests, holds, shared pools)."""
     rng = random.Random(plant.seed)
     S, n = plant.stages, len(plant.stages)

@@ -48,4 +48,4 @@ A process or move stage can have `buffer`: the maximum number of lots waiting in
 - Cross-checks: with no blocking the new engine gives the same times as the old one for every lot; lots are conserved; JS and Python match on times, blocked hours and max queue; buffer limits are never exceeded (see tests).
 - Example `examples/pharma_buffers.json`: 7.9 batches/week and 8.83 days lead time, against 7.7 and 9.01 without buffers (single run, illustrative). Most blocked resource-hours are forklift moves holding a pallet.
 - Learn: with finite buffers, forklifts blocked holding pallets become a hidden bottleneck.
-- Limits: no AGV path conflicts, no shift handovers, delay-only stages (wait, wave, hold) have no capacity limit, nothing validated against a real plant. In the view, buffer size change below 1 is clamped to 1.
+- Limits: no AGV path conflicts, no shift handovers, wave and hold stages have no capacity limit (a wait stage can have one: `"capacity": N`, modelled as N resources, shown as a process in the view), nothing validated against a real plant. In the view, buffer size change below 1 is clamped to 1.

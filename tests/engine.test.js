@@ -65,3 +65,11 @@ test('buffer limits are respected', () => {
   const p = cfgB(); const j = simulate(p);
   p.stages.forEach((s, k) => { if (s.buffer != null) assert.ok(j.stats[k].maxq <= s.buffer, `${s.name}: ${j.stats[k].maxq} > ${s.buffer}`); });
 });
+
+test('capacity on a wait stage limits the flow (JS)', () => {
+  const mk = cap => ({ stages: [Object.assign({ name: 'rack', kind: 'wait', hours: 20, cv: 0 }, cap ? { capacity: cap } : {})], products: ['A'], release_every: 10, horizon: 24 * 7 * 20, warmup: 24 * 7 * 2, seed: 1 });
+  assert.ok(Math.abs(simulate(mk(0)).throughput - 16.8) < 0.6);
+  assert.ok(Math.abs(simulate(mk(1)).throughput - 168 / 20) < 0.6);
+  assert.ok(Math.abs(simulate(mk(2)).throughput - 16.8) < 0.6);
+  assert.throws(() => simulate({ stages: [{ name: 'x', kind: 'process', hours: 1, capacity: 2 }], products: ['A'], release_every: 10, horizon: 500, warmup: 0 }));
+});
