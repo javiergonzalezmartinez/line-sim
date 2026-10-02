@@ -13,7 +13,7 @@ def load(path):
     return Plant(st, d["products"], d["release_every"], d.get("horizon", 2016), d.get("warmup", 336), d.get("seed", 1), d.get("layout"), d.get("m_per_px", 0.0), d.get("speed_kmh", 6.0), d.get("handling_min", 6.0))
 
 def main(argv=None):
-    ap = argparse.ArgumentParser(prog="plantsim"); ap.add_argument("config"); ap.add_argument("--view", help="write animated HTML view"); ap.add_argument("--events", help="write the canonical event log (JSONL)")
+    ap = argparse.ArgumentParser(prog="plantsim"); ap.add_argument("config"); ap.add_argument("--view", help="write animated HTML view"); ap.add_argument("--events", help="write the canonical event log (JSONL)"); ap.add_argument("--telemetry", help="write machine telemetry sensor events (JSONL)")
     a = ap.parse_args(argv)
     p = load(a.config); r = simulate(p)
     print(f"throughput {r.throughput_per_week:.2f} batches/week, mean lead time {r.mean_lead_time_days:.1f} days, busiest: {r.bottleneck}, rejected lots in window: {r.rejected}")
@@ -27,6 +27,10 @@ def main(argv=None):
     if a.events:
         from .events import events, write_jsonl
         print(f"{write_jsonl(events(p, r), a.events)} events written to {a.events}")
+    if a.telemetry:
+        from .events import write_jsonl
+        from .signals import telemetry
+        print(f"{write_jsonl(telemetry(p, r), a.telemetry)} telemetry events written to {a.telemetry}")
     if a.view:
         from .view import render
         open(a.view, 'w', encoding='utf-8').write(render(p, r))
