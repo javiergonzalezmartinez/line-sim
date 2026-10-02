@@ -1,0 +1,213 @@
+{
+ "_source": "Spec provided by Javi (synthetic / anonymised digital-twin workbook, sheet 14_KPIS). Public standards cited in the workbook (NIST, OPC UA, GS1 EPCIS, EU Annex 11, 21 CFR 11, ISA-88/95). Not real plant data.",
+ "records": [
+  {
+   "ID": "KPI-001",
+   "KPI": "Throughput",
+   "Fórmula conceptual": "units_or_kg / time",
+   "Definición": "Completed good output per time window",
+   "Dominio": "Process/Packaging",
+   "Base": "DESIGN"
+  },
+  {
+   "ID": "KPI-002",
+   "KPI": "LeadTime",
+   "Fórmula conceptual": "end_time - request_time",
+   "Definición": "End-to-end request-to-completion time",
+   "Dominio": "End-to-end",
+   "Base": "DESIGN"
+  },
+  {
+   "ID": "KPI-003",
+   "KPI": "CycleTime",
+   "Fórmula conceptual": "completion - start",
+   "Definición": "Execution time excluding pre-release wait by definition chosen",
+   "Dominio": "Job/Task",
+   "Base": "DESIGN"
+  },
+  {
+   "ID": "KPI-004",
+   "KPI": "QueueWait",
+   "Fórmula conceptual": "service_start - queue_enter",
+   "Definición": "Waiting before resource seize",
+   "Dominio": "Queue",
+   "Base": "DESIGN"
+  },
+  {
+   "ID": "KPI-005",
+   "KPI": "WIP",
+   "Fórmula conceptual": "count/quantity active in process",
+   "Definición": "Current work-in-process",
+   "Dominio": "Process",
+   "Base": "DESIGN"
+  },
+  {
+   "ID": "KPI-006",
+   "KPI": "ResourceUtilization",
+   "Fórmula conceptual": "busy_time / available_time",
+   "Definición": "Resource busy fraction",
+   "Dominio": "Resource",
+   "Base": "DESIGN"
+  },
+  {
+   "ID": "KPI-007",
+   "KPI": "BlockingTime",
+   "Fórmula conceptual": "time unable to release output",
+   "Definición": "Downstream capacity blockage",
+   "Dominio": "Equipment/Buffer",
+   "Base": "DESIGN"
+  },
+  {
+   "ID": "KPI-008",
+   "KPI": "StarvationTime",
+   "Fórmula conceptual": "time ready but no input",
+   "Definición": "Upstream material shortage",
+   "Dominio": "Equipment",
+   "Base": "DESIGN"
+  },
+  {
+   "ID": "KPI-009",
+   "KPI": "SetupFraction",
+   "Fórmula conceptual": "setup_time / scheduled_time",
+   "Definición": "Setup burden",
+   "Dominio": "Equipment",
+   "Base": "DESIGN"
+  },
+  {
+   "ID": "KPI-010",
+   "KPI": "DowntimeFraction",
+   "Fórmula conceptual": "unavailable_time / scheduled_time",
+   "Definición": "Unplanned/planned downtime according to classification",
+   "Dominio": "Equipment",
+   "Base": "DESIGN"
+  },
+  {
+   "ID": "KPI-011",
+   "KPI": "FirstPassYield",
+   "Fórmula conceptual": "good output first pass / total output",
+   "Definición": "Quality yield",
+   "Dominio": "Process",
+   "Base": "DESIGN"
+  },
+  {
+   "ID": "KPI-012",
+   "KPI": "InventoryAccuracy",
+   "Fórmula conceptual": "1 - |physical-logical| / max(reference,epsilon)",
+   "Definición": "Inventory alignment",
+   "Dominio": "Warehouse",
+   "Base": "DESIGN"
+  },
+  {
+   "ID": "KPI-013",
+   "KPI": "FEFOCompliance",
+   "Fórmula conceptual": "eligible picks following FEFO / eligible picks",
+   "Definición": "Selection-rule compliance",
+   "Dominio": "Warehouse",
+   "Base": "DESIGN"
+  },
+  {
+   "ID": "KPI-014",
+   "KPI": "TaskOnTime",
+   "Fórmula conceptual": "tasks completed by due time / completed tasks",
+   "Definición": "Execution service level",
+   "Dominio": "Warehouse",
+   "Base": "DESIGN"
+  },
+  {
+   "ID": "KPI-015",
+   "KPI": "MessageSuccess",
+   "Fórmula conceptual": "reconciled messages / sent messages",
+   "Definición": "Integration success",
+   "Dominio": "Integration",
+   "Base": "DESIGN"
+  },
+  {
+   "ID": "KPI-016",
+   "KPI": "MessageP95Latency",
+   "Fórmula conceptual": "p95(received_at-sent_at)",
+   "Definición": "Integration tail latency",
+   "Dominio": "Integration",
+   "Base": "DESIGN"
+  },
+  {
+   "ID": "KPI-017",
+   "KPI": "RetryRate",
+   "Fórmula conceptual": "retry attempts / initial sends",
+   "Definición": "Integration instability",
+   "Dominio": "Integration",
+   "Base": "DESIGN"
+  },
+  {
+   "ID": "KPI-018",
+   "KPI": "SensorGoodQuality",
+   "Fórmula conceptual": "GOOD observations / total",
+   "Definición": "Telemetry quality",
+   "Dominio": "Telemetry",
+   "Base": "DESIGN"
+  },
+  {
+   "ID": "KPI-019",
+   "KPI": "DataFreshness",
+   "Fórmula conceptual": "now - latest source_timestamp",
+   "Definición": "Currentness of telemetry",
+   "Dominio": "Telemetry",
+   "Base": "DESIGN"
+  },
+  {
+   "ID": "KPI-020",
+   "KPI": "ClockSkewP95",
+   "Fórmula conceptual": "p95(|server-source|)",
+   "Definición": "Clock synchronization quality",
+   "Dominio": "Telemetry",
+   "Base": "DESIGN"
+  },
+  {
+   "ID": "KPI-021",
+   "KPI": "AuditCompleteness",
+   "Fórmula conceptual": "GxP mutations with audit / GxP mutations",
+   "Definición": "Audit coverage",
+   "Dominio": "GxP",
+   "Base": "DESIGN"
+  },
+  {
+   "ID": "KPI-022",
+   "KPI": "ElectronicSignatureCoverage",
+   "Fórmula conceptual": "required signed actions signed / required actions",
+   "Definición": "Signature control",
+   "Dominio": "GxP",
+   "Base": "DESIGN"
+  },
+  {
+   "ID": "KPI-023",
+   "KPI": "HoldExposure",
+   "Fórmula conceptual": "quantity*time under hold",
+   "Definición": "Operational impact of quality holds",
+   "Dominio": "Quality",
+   "Base": "DESIGN"
+  },
+  {
+   "ID": "KPI-024",
+   "KPI": "ExcursionDuration",
+   "Fórmula conceptual": "close-start",
+   "Definición": "Environmental/process excursion duration",
+   "Dominio": "Quality",
+   "Base": "DESIGN"
+  },
+  {
+   "ID": "KPI-025",
+   "KPI": "ReworkRate",
+   "Fórmula conceptual": "reworked qty / produced qty",
+   "Definición": "Rework burden",
+   "Dominio": "Quality/Process",
+   "Base": "DESIGN"
+  },
+  {
+   "ID": "KPI-026",
+   "KPI": "ScrapRate",
+   "Fórmula conceptual": "scrap qty / input or output basis",
+   "Definición": "Loss rate",
+   "Dominio": "Process",
+   "Base": "DESIGN"
+  }
+ ]
+}

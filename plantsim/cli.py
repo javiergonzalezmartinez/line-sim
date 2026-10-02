@@ -13,7 +13,7 @@ def load(path):
     return Plant(st, d["products"], d["release_every"], d.get("horizon", 2016), d.get("warmup", 336), d.get("seed", 1), d.get("layout"), d.get("m_per_px", 0.0), d.get("speed_kmh", 6.0), d.get("handling_min", 6.0))
 
 def main(argv=None):
-    ap = argparse.ArgumentParser(prog="plantsim"); ap.add_argument("config"); ap.add_argument("--view", help="write animated HTML view")
+    ap = argparse.ArgumentParser(prog="plantsim"); ap.add_argument("config"); ap.add_argument("--view", help="write animated HTML view"); ap.add_argument("--events", help="write the canonical event log (JSONL)")
     a = ap.parse_args(argv)
     p = load(a.config); r = simulate(p)
     print(f"throughput {r.throughput_per_week:.2f} batches/week, mean lead time {r.mean_lead_time_days:.1f} days, busiest: {r.bottleneck}, rejected lots in window: {r.rejected}")
@@ -24,6 +24,9 @@ def main(argv=None):
         print(f"  {st.name:<28} proc {u['process']:5.0%} setup {u['setup']:5.0%} repair {u['repair']:5.0%}  mean wait {st.wait/n:6.1f} h" + (f"  material waits {st.short_lots} lots, {st.short_hours:.0f} h" if st.short_lots else ""))
     for n, u in r.pool_utilisation(p).items():
         print(f"  pool {n}: busy {u:.0%}")
+    if a.events:
+        from .events import events, write_jsonl
+        print(f"{write_jsonl(events(p, r), a.events)} events written to {a.events}")
     if a.view:
         from .view import render
         open(a.view, 'w', encoding='utf-8').write(render(p, r))

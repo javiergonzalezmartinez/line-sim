@@ -1,0 +1,117 @@
+{
+ "_source": "Spec provided by Javi (synthetic / anonymised digital-twin workbook, sheet 09_BATCH_HIERARCHY). Public standards cited in the workbook (NIST, OPC UA, GS1 EPCIS, EU Annex 11, 21 CFR 11, ISA-88/95). Not real plant data.",
+ "records": [
+  {
+   "ID": "PHY-01",
+   "Modelo": "Physical",
+   "Nivel": "SITE",
+   "Ejemplo sintético": "SITE-01",
+   "Semántica": "Top facility boundary",
+   "Fuente": "PUB-017/PUB-018"
+  },
+  {
+   "ID": "PHY-02",
+   "Modelo": "Physical",
+   "Nivel": "AREA",
+   "Ejemplo sintético": "AREA-PROC-01",
+   "Semántica": "Process area",
+   "Fuente": "PUB-018"
+  },
+  {
+   "ID": "PHY-03",
+   "Modelo": "Physical",
+   "Nivel": "PROCESS_CELL",
+   "Ejemplo sintético": "CELL-01",
+   "Semántica": "Batch processing cell",
+   "Fuente": "PUB-018"
+  },
+  {
+   "ID": "PHY-04",
+   "Modelo": "Physical",
+   "Nivel": "UNIT",
+   "Ejemplo sintético": "UNIT-01",
+   "Semántica": "Major independent processing unit",
+   "Fuente": "PUB-018"
+  },
+  {
+   "ID": "PHY-05",
+   "Modelo": "Physical",
+   "Nivel": "EQUIPMENT_MODULE",
+   "Ejemplo sintético": "EM-01",
+   "Semántica": "Functional equipment grouping",
+   "Fuente": "PUB-018"
+  },
+  {
+   "ID": "PHY-06",
+   "Modelo": "Physical",
+   "Nivel": "CONTROL_MODULE",
+   "Ejemplo sintético": "CM-01",
+   "Semántica": "Reusable basic control entity",
+   "Fuente": "PUB-018"
+  },
+  {
+   "ID": "PRC-01",
+   "Modelo": "Procedural",
+   "Nivel": "PROCEDURE",
+   "Ejemplo sintético": "PROC-01",
+   "Semántica": "Top recipe procedure",
+   "Fuente": "PUB-018"
+  },
+  {
+   "ID": "PRC-02",
+   "Modelo": "Procedural",
+   "Nivel": "UNIT_PROCEDURE",
+   "Ejemplo sintético": "UP-01",
+   "Semántica": "Procedure bound to unit-level work",
+   "Fuente": "PUB-018"
+  },
+  {
+   "ID": "PRC-03",
+   "Modelo": "Procedural",
+   "Nivel": "OPERATION",
+   "Ejemplo sintético": "OP-01",
+   "Semántica": "Operation inside unit procedure",
+   "Fuente": "PUB-018"
+  },
+  {
+   "ID": "PRC-04",
+   "Modelo": "Procedural",
+   "Nivel": "PHASE",
+   "Ejemplo sintético": "PH-01",
+   "Semántica": "Lowest procedural execution step",
+   "Fuente": "PUB-018"
+  },
+  {
+   "ID": "REC-01",
+   "Modelo": "Recipe",
+   "Nivel": "GENERAL_RECIPE",
+   "Ejemplo sintético": "REC-GEN-01",
+   "Semántica": "Product/process knowledge independent of site",
+   "Fuente": "PUB-017"
+  },
+  {
+   "ID": "REC-02",
+   "Modelo": "Recipe",
+   "Nivel": "SITE_RECIPE",
+   "Ejemplo sintético": "REC-SITE-01",
+   "Semántica": "Site-adapted recipe",
+   "Fuente": "PUB-017"
+  },
+  {
+   "ID": "REC-03",
+   "Modelo": "Recipe",
+   "Nivel": "MASTER_RECIPE",
+   "Ejemplo sintético": "REC-MST-01",
+   "Semántica": "Execution-capable recipe basis",
+   "Fuente": "PUB-017"
+  },
+  {
+   "ID": "REC-04",
+   "Modelo": "Recipe",
+   "Nivel": "CONTROL_RECIPE",
+   "Ejemplo sintético": "REC-CTL-0001",
+   "Semántica": "Batch/job-specific executable recipe",
+   "Fuente": "PUB-017"
+  }
+ ]
+}

@@ -1,0 +1,825 @@
+{
+ "_source": "Spec provided by Javi (synthetic / anonymised digital-twin workbook, sheet 08_MAQUINAS_ESTADO). Public standards cited in the workbook (NIST, OPC UA, GS1 EPCIS, EU Annex 11, 21 CFR 11, ISA-88/95). Not real plant data.",
+ "records": [
+  {
+   "ID": "TRN-0001",
+   "Máquina": "JOB_ORDER",
+   "Origen": "NOT_ALLOWED_TO_START",
+   "Evento": "Start",
+   "Destino": "ALLOWED_TO_START",
+   "Guard/Precondición": "Method/condition accepted",
+   "Nota": "State semantics adapted from OPC UA ISA-95 Job Control",
+   "Base": "PUB-007"
+  },
+  {
+   "ID": "TRN-0002",
+   "Máquina": "JOB_ORDER",
+   "Origen": "ALLOWED_TO_START",
+   "Evento": "RevokeStart",
+   "Destino": "NOT_ALLOWED_TO_START",
+   "Guard/Precondición": "Method/condition accepted",
+   "Nota": "State semantics adapted from OPC UA ISA-95 Job Control",
+   "Base": "PUB-007"
+  },
+  {
+   "ID": "TRN-0003",
+   "Máquina": "JOB_ORDER",
+   "Origen": "ALLOWED_TO_START",
+   "Evento": "ExecutionBegins",
+   "Destino": "RUNNING",
+   "Guard/Precondición": "Method/condition accepted",
+   "Nota": "State semantics adapted from OPC UA ISA-95 Job Control",
+   "Base": "PUB-007"
+  },
+  {
+   "ID": "TRN-0004",
+   "Máquina": "JOB_ORDER",
+   "Origen": "RUNNING",
+   "Evento": "Pause",
+   "Destino": "INTERRUPTED",
+   "Guard/Precondición": "Method/condition accepted",
+   "Nota": "State semantics adapted from OPC UA ISA-95 Job Control",
+   "Base": "PUB-007"
+  },
+  {
+   "ID": "TRN-0005",
+   "Máquina": "JOB_ORDER",
+   "Origen": "INTERRUPTED",
+   "Evento": "Resume",
+   "Destino": "RUNNING",
+   "Guard/Precondición": "Method/condition accepted",
+   "Nota": "State semantics adapted from OPC UA ISA-95 Job Control",
+   "Base": "PUB-007"
+  },
+  {
+   "ID": "TRN-0006",
+   "Máquina": "JOB_ORDER",
+   "Origen": "RUNNING",
+   "Evento": "StopOrNaturalEnd",
+   "Destino": "ENDED",
+   "Guard/Precondición": "Method/condition accepted",
+   "Nota": "State semantics adapted from OPC UA ISA-95 Job Control",
+   "Base": "PUB-007"
+  },
+  {
+   "ID": "TRN-0007",
+   "Máquina": "JOB_ORDER",
+   "Origen": "INTERRUPTED",
+   "Evento": "Stop",
+   "Destino": "ENDED",
+   "Guard/Precondición": "Method/condition accepted",
+   "Nota": "State semantics adapted from OPC UA ISA-95 Job Control",
+   "Base": "PUB-007"
+  },
+  {
+   "ID": "TRN-0008",
+   "Máquina": "JOB_ORDER",
+   "Origen": "NOT_ALLOWED_TO_START",
+   "Evento": "Abort",
+   "Destino": "ABORTED",
+   "Guard/Precondición": "Method/condition accepted",
+   "Nota": "State semantics adapted from OPC UA ISA-95 Job Control",
+   "Base": "PUB-007"
+  },
+  {
+   "ID": "TRN-0009",
+   "Máquina": "JOB_ORDER",
+   "Origen": "ALLOWED_TO_START",
+   "Evento": "Abort",
+   "Destino": "ABORTED",
+   "Guard/Precondición": "Method/condition accepted",
+   "Nota": "State semantics adapted from OPC UA ISA-95 Job Control",
+   "Base": "PUB-007"
+  },
+  {
+   "ID": "TRN-0010",
+   "Máquina": "JOB_ORDER",
+   "Origen": "RUNNING",
+   "Evento": "Abort",
+   "Destino": "ABORTED",
+   "Guard/Precondición": "Method/condition accepted",
+   "Nota": "State semantics adapted from OPC UA ISA-95 Job Control",
+   "Base": "PUB-007"
+  },
+  {
+   "ID": "TRN-0011",
+   "Máquina": "JOB_ORDER",
+   "Origen": "INTERRUPTED",
+   "Evento": "Abort",
+   "Destino": "ABORTED",
+   "Guard/Precondición": "Method/condition accepted",
+   "Nota": "State semantics adapted from OPC UA ISA-95 Job Control",
+   "Base": "PUB-007"
+  },
+  {
+   "ID": "TRN-0012",
+   "Máquina": "MACHINERY_ITEM_STATE",
+   "Origen": "NOT_AVAILABLE",
+   "Evento": "Commission",
+   "Destino": "NOT_EXECUTING",
+   "Guard/Precondición": "Resource lifecycle/condition",
+   "Nota": "Top-level state set follows OPC UA Machinery; transitions are domain profile",
+   "Base": "PUB-008"
+  },
+  {
+   "ID": "TRN-0013",
+   "Máquina": "MACHINERY_ITEM_STATE",
+   "Origen": "NOT_EXECUTING",
+   "Evento": "StartExecution",
+   "Destino": "EXECUTING",
+   "Guard/Precondición": "Resource lifecycle/condition",
+   "Nota": "Top-level state set follows OPC UA Machinery; transitions are domain profile",
+   "Base": "PUB-008"
+  },
+  {
+   "ID": "TRN-0014",
+   "Máquina": "MACHINERY_ITEM_STATE",
+   "Origen": "EXECUTING",
+   "Evento": "StopExecution",
+   "Destino": "NOT_EXECUTING",
+   "Guard/Precondición": "Resource lifecycle/condition",
+   "Nota": "Top-level state set follows OPC UA Machinery; transitions are domain profile",
+   "Base": "PUB-008"
+  },
+  {
+   "ID": "TRN-0015",
+   "Máquina": "MACHINERY_ITEM_STATE",
+   "Origen": "EXECUTING",
+   "Evento": "ServiceRequired",
+   "Destino": "OUT_OF_SERVICE",
+   "Guard/Precondición": "Resource lifecycle/condition",
+   "Nota": "Top-level state set follows OPC UA Machinery; transitions are domain profile",
+   "Base": "PUB-008"
+  },
+  {
+   "ID": "TRN-0016",
+   "Máquina": "MACHINERY_ITEM_STATE",
+   "Origen": "NOT_EXECUTING",
+   "Evento": "ServiceRequired",
+   "Destino": "OUT_OF_SERVICE",
+   "Guard/Precondición": "Resource lifecycle/condition",
+   "Nota": "Top-level state set follows OPC UA Machinery; transitions are domain profile",
+   "Base": "PUB-008"
+  },
+  {
+   "ID": "TRN-0017",
+   "Máquina": "MACHINERY_ITEM_STATE",
+   "Origen": "OUT_OF_SERVICE",
+   "Evento": "ServiceComplete",
+   "Destino": "NOT_EXECUTING",
+   "Guard/Precondición": "Resource lifecycle/condition",
+   "Nota": "Top-level state set follows OPC UA Machinery; transitions are domain profile",
+   "Base": "PUB-008"
+  },
+  {
+   "ID": "TRN-0018",
+   "Máquina": "MACHINERY_OPERATION_MODE",
+   "Origen": "NONE",
+   "Evento": "EnterSetup",
+   "Destino": "SETUP",
+   "Guard/Precondición": "Allowed transition in plant profile",
+   "Nota": "Modes from OPC UA Machinery",
+   "Base": "PUB-008"
+  },
+  {
+   "ID": "TRN-0019",
+   "Máquina": "MACHINERY_OPERATION_MODE",
+   "Origen": "SETUP",
+   "Evento": "SetupComplete",
+   "Destino": "NONE",
+   "Guard/Precondición": "Allowed transition in plant profile",
+   "Nota": "Modes from OPC UA Machinery",
+   "Base": "PUB-008"
+  },
+  {
+   "ID": "TRN-0020",
+   "Máquina": "MACHINERY_OPERATION_MODE",
+   "Origen": "NONE",
+   "Evento": "EnterProcessing",
+   "Destino": "PROCESSING",
+   "Guard/Precondición": "Allowed transition in plant profile",
+   "Nota": "Modes from OPC UA Machinery",
+   "Base": "PUB-008"
+  },
+  {
+   "ID": "TRN-0021",
+   "Máquina": "MACHINERY_OPERATION_MODE",
+   "Origen": "PROCESSING",
+   "Evento": "ProcessComplete",
+   "Destino": "NONE",
+   "Guard/Precondición": "Allowed transition in plant profile",
+   "Nota": "Modes from OPC UA Machinery",
+   "Base": "PUB-008"
+  },
+  {
+   "ID": "TRN-0022",
+   "Máquina": "MACHINERY_OPERATION_MODE",
+   "Origen": "NONE",
+   "Evento": "EnterMaintenance",
+   "Destino": "MAINTENANCE",
+   "Guard/Precondición": "Allowed transition in plant profile",
+   "Nota": "Modes from OPC UA Machinery",
+   "Base": "PUB-008"
+  },
+  {
+   "ID": "TRN-0023",
+   "Máquina": "MACHINERY_OPERATION_MODE",
+   "Origen": "MAINTENANCE",
+   "Evento": "MaintenanceComplete",
+   "Destino": "NONE",
+   "Guard/Precondición": "Allowed transition in plant profile",
+   "Nota": "Modes from OPC UA Machinery",
+   "Base": "PUB-008"
+  },
+  {
+   "ID": "TRN-0024",
+   "Máquina": "MACHINERY_OPERATION_MODE",
+   "Origen": "SETUP",
+   "Evento": "StartProcessing",
+   "Destino": "PROCESSING",
+   "Guard/Precondición": "Allowed transition in plant profile",
+   "Nota": "Modes from OPC UA Machinery",
+   "Base": "PUB-008"
+  },
+  {
+   "ID": "TRN-0025",
+   "Máquina": "MACHINERY_OPERATION_MODE",
+   "Origen": "PROCESSING",
+   "Evento": "EnterMaintenance",
+   "Destino": "MAINTENANCE",
+   "Guard/Precondición": "Allowed transition in plant profile",
+   "Nota": "Modes from OPC UA Machinery",
+   "Base": "PUB-008"
+  },
+  {
+   "ID": "TRN-0026",
+   "Máquina": "HANDLING_UNIT",
+   "Origen": "CREATED",
+   "Evento": "label.printed",
+   "Destino": "LABEL_PENDING",
+   "Guard/Precondición": "Identity and stock invariants valid",
+   "Nota": "Generic lifecycle",
+   "Base": "DESIGN"
+  },
+  {
+   "ID": "TRN-0027",
+   "Máquina": "HANDLING_UNIT",
+   "Origen": "LABEL_PENDING",
+   "Evento": "label.verified",
+   "Destino": "QUARANTINE",
+   "Guard/Precondición": "Identity and stock invariants valid",
+   "Nota": "Generic lifecycle",
+   "Base": "DESIGN"
+  },
+  {
+   "ID": "TRN-0028",
+   "Máquina": "HANDLING_UNIT",
+   "Origen": "QUARANTINE",
+   "Evento": "quality.status_changed:RELEASED",
+   "Destino": "AVAILABLE",
+   "Guard/Precondición": "Identity and stock invariants valid",
+   "Nota": "Generic lifecycle",
+   "Base": "DESIGN"
+  },
+  {
+   "ID": "TRN-0029",
+   "Máquina": "HANDLING_UNIT",
+   "Origen": "QUARANTINE",
+   "Evento": "quality.status_changed:REJECTED",
+   "Destino": "REJECTED",
+   "Guard/Precondición": "Identity and stock invariants valid",
+   "Nota": "Generic lifecycle",
+   "Base": "DESIGN"
+  },
+  {
+   "ID": "TRN-0030",
+   "Máquina": "HANDLING_UNIT",
+   "Origen": "AVAILABLE",
+   "Evento": "reserve.created",
+   "Destino": "RESERVED",
+   "Guard/Precondición": "Identity and stock invariants valid",
+   "Nota": "Generic lifecycle",
+   "Base": "DESIGN"
+  },
+  {
+   "ID": "TRN-0031",
+   "Máquina": "HANDLING_UNIT",
+   "Origen": "RESERVED",
+   "Evento": "move.picked",
+   "Destino": "MOVING",
+   "Guard/Precondición": "Identity and stock invariants valid",
+   "Nota": "Generic lifecycle",
+   "Base": "DESIGN"
+  },
+  {
+   "ID": "TRN-0032",
+   "Máquina": "HANDLING_UNIT",
+   "Origen": "MOVING",
+   "Evento": "move.completed",
+   "Destino": "STAGED",
+   "Guard/Precondición": "Identity and stock invariants valid",
+   "Nota": "Generic lifecycle",
+   "Base": "DESIGN"
+  },
+  {
+   "ID": "TRN-0033",
+   "Máquina": "HANDLING_UNIT",
+   "Origen": "STAGED",
+   "Evento": "phase.material_consumed",
+   "Destino": "IN_PROCESS",
+   "Guard/Precondición": "Identity and stock invariants valid",
+   "Nota": "Generic lifecycle",
+   "Base": "DESIGN"
+  },
+  {
+   "ID": "TRN-0034",
+   "Máquina": "HANDLING_UNIT",
+   "Origen": "AVAILABLE",
+   "Evento": "dispense.hu_arrived",
+   "Destino": "STAGED",
+   "Guard/Precondición": "Identity and stock invariants valid",
+   "Nota": "Generic lifecycle",
+   "Base": "DESIGN"
+  },
+  {
+   "ID": "TRN-0035",
+   "Máquina": "HANDLING_UNIT",
+   "Origen": "IN_PROCESS",
+   "Evento": "dispense.source_partial",
+   "Destino": "PARTIAL",
+   "Guard/Precondición": "Identity and stock invariants valid",
+   "Nota": "Generic lifecycle",
+   "Base": "DESIGN"
+  },
+  {
+   "ID": "TRN-0036",
+   "Máquina": "HANDLING_UNIT",
+   "Origen": "IN_PROCESS",
+   "Evento": "dispense.source_empty",
+   "Destino": "EMPTY",
+   "Guard/Precondición": "Identity and stock invariants valid",
+   "Nota": "Generic lifecycle",
+   "Base": "DESIGN"
+  },
+  {
+   "ID": "TRN-0037",
+   "Máquina": "HANDLING_UNIT",
+   "Origen": "PARTIAL",
+   "Evento": "return.completed",
+   "Destino": "AVAILABLE",
+   "Guard/Precondición": "Identity and stock invariants valid",
+   "Nota": "Generic lifecycle",
+   "Base": "DESIGN"
+  },
+  {
+   "ID": "TRN-0038",
+   "Máquina": "HANDLING_UNIT",
+   "Origen": "EMPTY",
+   "Evento": "container.closed",
+   "Destino": "CLOSED",
+   "Guard/Precondición": "Identity and stock invariants valid",
+   "Nota": "Generic lifecycle",
+   "Base": "DESIGN"
+  },
+  {
+   "ID": "TRN-0039",
+   "Máquina": "HANDLING_UNIT",
+   "Origen": "AVAILABLE",
+   "Evento": "quality.hold_applied",
+   "Destino": "HOLD",
+   "Guard/Precondición": "Identity and stock invariants valid",
+   "Nota": "Generic lifecycle",
+   "Base": "DESIGN"
+  },
+  {
+   "ID": "TRN-0040",
+   "Máquina": "HANDLING_UNIT",
+   "Origen": "RESERVED",
+   "Evento": "quality.hold_applied",
+   "Destino": "HOLD",
+   "Guard/Precondición": "Identity and stock invariants valid",
+   "Nota": "Generic lifecycle",
+   "Base": "DESIGN"
+  },
+  {
+   "ID": "TRN-0041",
+   "Máquina": "HANDLING_UNIT",
+   "Origen": "HOLD",
+   "Evento": "quality.hold_released",
+   "Destino": "AVAILABLE",
+   "Guard/Precondición": "Identity and stock invariants valid",
+   "Nota": "Generic lifecycle",
+   "Base": "DESIGN"
+  },
+  {
+   "ID": "TRN-0042",
+   "Máquina": "HANDLING_UNIT",
+   "Origen": "AVAILABLE",
+   "Evento": "shipment.hu_loaded",
+   "Destino": "LOADED",
+   "Guard/Precondición": "Identity and stock invariants valid",
+   "Nota": "Generic lifecycle",
+   "Base": "DESIGN"
+  },
+  {
+   "ID": "TRN-0043",
+   "Máquina": "HANDLING_UNIT",
+   "Origen": "LOADED",
+   "Evento": "shipment.dispatched",
+   "Destino": "SHIPPED",
+   "Guard/Precondición": "Identity and stock invariants valid",
+   "Nota": "Generic lifecycle",
+   "Base": "DESIGN"
+  },
+  {
+   "ID": "TRN-0044",
+   "Máquina": "TRANSPORT_TASK",
+   "Origen": "CREATED",
+   "Evento": "move.queued",
+   "Destino": "QUEUED",
+   "Guard/Precondición": "Physical/logical state reconciled",
+   "Nota": "DES logic",
+   "Base": "DESIGN"
+  },
+  {
+   "ID": "TRN-0045",
+   "Máquina": "TRANSPORT_TASK",
+   "Origen": "CREATED",
+   "Evento": "move.assigned",
+   "Destino": "ASSIGNED",
+   "Guard/Precondición": "Physical/logical state reconciled",
+   "Nota": "DES logic",
+   "Base": "DESIGN"
+  },
+  {
+   "ID": "TRN-0046",
+   "Máquina": "TRANSPORT_TASK",
+   "Origen": "QUEUED",
+   "Evento": "move.assigned",
+   "Destino": "ASSIGNED",
+   "Guard/Precondición": "Physical/logical state reconciled",
+   "Nota": "DES logic",
+   "Base": "DESIGN"
+  },
+  {
+   "ID": "TRN-0047",
+   "Máquina": "TRANSPORT_TASK",
+   "Origen": "ASSIGNED",
+   "Evento": "move.accepted",
+   "Destino": "ACCEPTED",
+   "Guard/Precondición": "Physical/logical state reconciled",
+   "Nota": "DES logic",
+   "Base": "DESIGN"
+  },
+  {
+   "ID": "TRN-0048",
+   "Máquina": "TRANSPORT_TASK",
+   "Origen": "ACCEPTED",
+   "Evento": "move.picked",
+   "Destino": "PICKED",
+   "Guard/Precondición": "Physical/logical state reconciled",
+   "Nota": "DES logic",
+   "Base": "DESIGN"
+  },
+  {
+   "ID": "TRN-0049",
+   "Máquina": "TRANSPORT_TASK",
+   "Origen": "PICKED",
+   "Evento": "move.departed",
+   "Destino": "IN_TRANSIT",
+   "Guard/Precondición": "Physical/logical state reconciled",
+   "Nota": "DES logic",
+   "Base": "DESIGN"
+  },
+  {
+   "ID": "TRN-0050",
+   "Máquina": "TRANSPORT_TASK",
+   "Origen": "IN_TRANSIT",
+   "Evento": "move.route_blocked",
+   "Destino": "BLOCKED",
+   "Guard/Precondición": "Physical/logical state reconciled",
+   "Nota": "DES logic",
+   "Base": "DESIGN"
+  },
+  {
+   "ID": "TRN-0051",
+   "Máquina": "TRANSPORT_TASK",
+   "Origen": "BLOCKED",
+   "Evento": "route.cleared",
+   "Destino": "IN_TRANSIT",
+   "Guard/Precondición": "Physical/logical state reconciled",
+   "Nota": "DES logic",
+   "Base": "DESIGN"
+  },
+  {
+   "ID": "TRN-0052",
+   "Máquina": "TRANSPORT_TASK",
+   "Origen": "IN_TRANSIT",
+   "Evento": "move.dropped",
+   "Destino": "DROPPED",
+   "Guard/Precondición": "Physical/logical state reconciled",
+   "Nota": "DES logic",
+   "Base": "DESIGN"
+  },
+  {
+   "ID": "TRN-0053",
+   "Máquina": "TRANSPORT_TASK",
+   "Origen": "DROPPED",
+   "Evento": "move.completed",
+   "Destino": "COMPLETE",
+   "Guard/Precondición": "Physical/logical state reconciled",
+   "Nota": "DES logic",
+   "Base": "DESIGN"
+  },
+  {
+   "ID": "TRN-0054",
+   "Máquina": "TRANSPORT_TASK",
+   "Origen": "CREATED",
+   "Evento": "move.cancelled",
+   "Destino": "CANCELLED",
+   "Guard/Precondición": "Physical/logical state reconciled",
+   "Nota": "DES logic",
+   "Base": "DESIGN"
+  },
+  {
+   "ID": "TRN-0055",
+   "Máquina": "TRANSPORT_TASK",
+   "Origen": "QUEUED",
+   "Evento": "move.cancelled",
+   "Destino": "CANCELLED",
+   "Guard/Precondición": "Physical/logical state reconciled",
+   "Nota": "DES logic",
+   "Base": "DESIGN"
+  },
+  {
+   "ID": "TRN-0056",
+   "Máquina": "TRANSPORT_TASK",
+   "Origen": "ASSIGNED",
+   "Evento": "move.timeout",
+   "Destino": "ERROR",
+   "Guard/Precondición": "Physical/logical state reconciled",
+   "Nota": "DES logic",
+   "Base": "DESIGN"
+  },
+  {
+   "ID": "TRN-0057",
+   "Máquina": "TRANSPORT_TASK",
+   "Origen": "IN_TRANSIT",
+   "Evento": "move.timeout",
+   "Destino": "ERROR",
+   "Guard/Precondición": "Physical/logical state reconciled",
+   "Nota": "DES logic",
+   "Base": "DESIGN"
+  },
+  {
+   "ID": "TRN-0058",
+   "Máquina": "TRANSPORT_TASK",
+   "Origen": "ERROR",
+   "Evento": "move.retry_scheduled",
+   "Destino": "QUEUED",
+   "Guard/Precondición": "Physical/logical state reconciled",
+   "Nota": "DES logic",
+   "Base": "DESIGN"
+  },
+  {
+   "ID": "TRN-0059",
+   "Máquina": "QUALITY_STATUS",
+   "Origen": "QUARANTINE",
+   "Evento": "sample.request_created",
+   "Destino": "SAMPLING",
+   "Guard/Precondición": "Authorized quality transition",
+   "Nota": "Generic pharmaceutical profile",
+   "Base": "GMP+DESIGN"
+  },
+  {
+   "ID": "TRN-0060",
+   "Máquina": "QUALITY_STATUS",
+   "Origen": "SAMPLING",
+   "Evento": "sample.sent_to_lab",
+   "Destino": "TESTING",
+   "Guard/Precondición": "Authorized quality transition",
+   "Nota": "Generic pharmaceutical profile",
+   "Base": "GMP+DESIGN"
+  },
+  {
+   "ID": "TRN-0061",
+   "Máquina": "QUALITY_STATUS",
+   "Origen": "TESTING",
+   "Evento": "sample.status_released",
+   "Destino": "RELEASED",
+   "Guard/Precondición": "Authorized quality transition",
+   "Nota": "Generic pharmaceutical profile",
+   "Base": "GMP+DESIGN"
+  },
+  {
+   "ID": "TRN-0062",
+   "Máquina": "QUALITY_STATUS",
+   "Origen": "TESTING",
+   "Evento": "sample.status_rejected",
+   "Destino": "REJECTED",
+   "Guard/Precondición": "Authorized quality transition",
+   "Nota": "Generic pharmaceutical profile",
+   "Base": "GMP+DESIGN"
+  },
+  {
+   "ID": "TRN-0063",
+   "Máquina": "QUALITY_STATUS",
+   "Origen": "RELEASED",
+   "Evento": "quality.hold_applied",
+   "Destino": "HOLD",
+   "Guard/Precondición": "Authorized quality transition",
+   "Nota": "Generic pharmaceutical profile",
+   "Base": "GMP+DESIGN"
+  },
+  {
+   "ID": "TRN-0064",
+   "Máquina": "QUALITY_STATUS",
+   "Origen": "HOLD",
+   "Evento": "quality.hold_released",
+   "Destino": "RELEASED",
+   "Guard/Precondición": "Authorized quality transition",
+   "Nota": "Generic pharmaceutical profile",
+   "Base": "GMP+DESIGN"
+  },
+  {
+   "ID": "TRN-0065",
+   "Máquina": "QUALITY_STATUS",
+   "Origen": "QUARANTINE",
+   "Evento": "quality.hold_applied",
+   "Destino": "HOLD",
+   "Guard/Precondición": "Authorized quality transition",
+   "Nota": "Generic pharmaceutical profile",
+   "Base": "GMP+DESIGN"
+  },
+  {
+   "ID": "TRN-0066",
+   "Máquina": "QUALITY_STATUS",
+   "Origen": "RELEASED",
+   "Evento": "expiry.reached",
+   "Destino": "EXPIRED",
+   "Guard/Precondición": "Authorized quality transition",
+   "Nota": "Generic pharmaceutical profile",
+   "Base": "GMP+DESIGN"
+  },
+  {
+   "ID": "TRN-0067",
+   "Máquina": "PHASE_EXECUTION",
+   "Origen": "QUEUED",
+   "Evento": "phase.ready",
+   "Destino": "READY",
+   "Guard/Precondición": "Preconditions/interlocks/authorization",
+   "Nota": "ISA-88-inspired execution model",
+   "Base": "PUB-017+DESIGN"
+  },
+  {
+   "ID": "TRN-0068",
+   "Máquina": "PHASE_EXECUTION",
+   "Origen": "READY",
+   "Evento": "phase.started",
+   "Destino": "RUNNING",
+   "Guard/Precondición": "Preconditions/interlocks/authorization",
+   "Nota": "ISA-88-inspired execution model",
+   "Base": "PUB-017+DESIGN"
+  },
+  {
+   "ID": "TRN-0069",
+   "Máquina": "PHASE_EXECUTION",
+   "Origen": "RUNNING",
+   "Evento": "phase.held",
+   "Destino": "HELD",
+   "Guard/Precondición": "Preconditions/interlocks/authorization",
+   "Nota": "ISA-88-inspired execution model",
+   "Base": "PUB-017+DESIGN"
+  },
+  {
+   "ID": "TRN-0070",
+   "Máquina": "PHASE_EXECUTION",
+   "Origen": "HELD",
+   "Evento": "phase.resumed",
+   "Destino": "RUNNING",
+   "Guard/Precondición": "Preconditions/interlocks/authorization",
+   "Nota": "ISA-88-inspired execution model",
+   "Base": "PUB-017+DESIGN"
+  },
+  {
+   "ID": "TRN-0071",
+   "Máquina": "PHASE_EXECUTION",
+   "Origen": "RUNNING",
+   "Evento": "phase.completed",
+   "Destino": "COMPLETE",
+   "Guard/Precondición": "Preconditions/interlocks/authorization",
+   "Nota": "ISA-88-inspired execution model",
+   "Base": "PUB-017+DESIGN"
+  },
+  {
+   "ID": "TRN-0072",
+   "Máquina": "PHASE_EXECUTION",
+   "Origen": "RUNNING",
+   "Evento": "phase.aborted",
+   "Destino": "ABORTED",
+   "Guard/Precondición": "Preconditions/interlocks/authorization",
+   "Nota": "ISA-88-inspired execution model",
+   "Base": "PUB-017+DESIGN"
+  },
+  {
+   "ID": "TRN-0073",
+   "Máquina": "PHASE_EXECUTION",
+   "Origen": "HELD",
+   "Evento": "phase.aborted",
+   "Destino": "ABORTED",
+   "Guard/Precondición": "Preconditions/interlocks/authorization",
+   "Nota": "ISA-88-inspired execution model",
+   "Base": "PUB-017+DESIGN"
+  },
+  {
+   "ID": "TRN-0074",
+   "Máquina": "MESSAGE",
+   "Origen": "CREATED",
+   "Evento": "message.sent",
+   "Destino": "SENT",
+   "Guard/Precondición": "Idempotency/sequence rules enforced",
+   "Nota": "Integration reliability profile",
+   "Base": "DESIGN"
+  },
+  {
+   "ID": "TRN-0075",
+   "Máquina": "MESSAGE",
+   "Origen": "SENT",
+   "Evento": "message.acknowledged",
+   "Destino": "ACK",
+   "Guard/Precondición": "Idempotency/sequence rules enforced",
+   "Nota": "Integration reliability profile",
+   "Base": "DESIGN"
+  },
+  {
+   "ID": "TRN-0076",
+   "Máquina": "MESSAGE",
+   "Origen": "SENT",
+   "Evento": "message.rejected",
+   "Destino": "NACK",
+   "Guard/Precondición": "Idempotency/sequence rules enforced",
+   "Nota": "Integration reliability profile",
+   "Base": "DESIGN"
+  },
+  {
+   "ID": "TRN-0077",
+   "Máquina": "MESSAGE",
+   "Origen": "SENT",
+   "Evento": "message.timeout",
+   "Destino": "TIMEOUT",
+   "Guard/Precondición": "Idempotency/sequence rules enforced",
+   "Nota": "Integration reliability profile",
+   "Base": "DESIGN"
+  },
+  {
+   "ID": "TRN-0078",
+   "Máquina": "MESSAGE",
+   "Origen": "TIMEOUT",
+   "Evento": "message.retry",
+   "Destino": "SENT",
+   "Guard/Precondición": "Idempotency/sequence rules enforced",
+   "Nota": "Integration reliability profile",
+   "Base": "DESIGN"
+  },
+  {
+   "ID": "TRN-0079",
+   "Máquina": "MESSAGE",
+   "Origen": "NACK",
+   "Evento": "message.retry",
+   "Destino": "SENT",
+   "Guard/Precondición": "Idempotency/sequence rules enforced",
+   "Nota": "Integration reliability profile",
+   "Base": "DESIGN"
+  },
+  {
+   "ID": "TRN-0080",
+   "Máquina": "MESSAGE",
+   "Origen": "TIMEOUT",
+   "Evento": "message.dead_lettered",
+   "Destino": "DEAD_LETTER",
+   "Guard/Precondición": "Idempotency/sequence rules enforced",
+   "Nota": "Integration reliability profile",
+   "Base": "DESIGN"
+  },
+  {
+   "ID": "TRN-0081",
+   "Máquina": "MESSAGE",
+   "Origen": "NACK",
+   "Evento": "message.dead_lettered",
+   "Destino": "DEAD_LETTER",
+   "Guard/Precondición": "Idempotency/sequence rules enforced",
+   "Nota": "Integration reliability profile",
+   "Base": "DESIGN"
+  },
+  {
+   "ID": "TRN-0082",
+   "Máquina": "MESSAGE",
+   "Origen": "ACK",
+   "Evento": "message.reconciled",
+   "Destino": "RECONCILED",
+   "Guard/Precondición": "Idempotency/sequence rules enforced",
+   "Nota": "Integration reliability profile",
+   "Base": "DESIGN"
+  }
+ ]
+}

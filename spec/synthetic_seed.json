@@ -1,0 +1,173 @@
+{
+ "_source": "Spec provided by Javi (synthetic / anonymised digital-twin workbook, sheet 16_SEED_SINTETICO). Public standards cited in the workbook (NIST, OPC UA, GS1 EPCIS, EU Annex 11, 21 CFR 11, ISA-88/95). Not real plant data.",
+ "records": [
+  {
+   "Tipo": "SITE",
+   "ID": "SITE-01",
+   "Descripción": "Synthetic pharmaceutical site",
+   "Padre/Ref": "-",
+   "Propiedades": "-",
+   "Clasificación": "ANON"
+  },
+  {
+   "Tipo": "AREA",
+   "ID": "AREA-WH-01",
+   "Descripción": "Ambient warehouse",
+   "Padre/Ref": "SITE-01",
+   "Propiedades": "-",
+   "Clasificación": "ANON"
+  },
+  {
+   "Tipo": "AREA",
+   "ID": "AREA-WH-COLD-01",
+   "Descripción": "Cold warehouse",
+   "Padre/Ref": "SITE-01",
+   "Propiedades": "-",
+   "Clasificación": "ANON"
+  },
+  {
+   "Tipo": "AREA",
+   "ID": "AREA-DISP-01",
+   "Descripción": "Dispensing area",
+   "Padre/Ref": "SITE-01",
+   "Propiedades": "-",
+   "Clasificación": "ANON"
+  },
+  {
+   "Tipo": "AREA",
+   "ID": "AREA-PROC-01",
+   "Descripción": "Processing area",
+   "Padre/Ref": "SITE-01",
+   "Propiedades": "-",
+   "Clasificación": "ANON"
+  },
+  {
+   "Tipo": "AREA",
+   "ID": "AREA-PACK-01",
+   "Descripción": "Packaging area",
+   "Padre/Ref": "SITE-01",
+   "Propiedades": "-",
+   "Clasificación": "ANON"
+  },
+  {
+   "Tipo": "LOCATION",
+   "ID": "LOC-WH-REC-001",
+   "Descripción": "Inbound dock staging",
+   "Padre/Ref": "AREA-WH-01",
+   "Propiedades": "capacity_hu=12",
+   "Clasificación": "ANON"
+  },
+  {
+   "Tipo": "LOCATION",
+   "ID": "LOC-WH-BUF-001",
+   "Descripción": "Warehouse buffer",
+   "Padre/Ref": "AREA-WH-01",
+   "Propiedades": "capacity_hu=24",
+   "Clasificación": "ANON"
+  },
+  {
+   "Tipo": "LOCATION",
+   "ID": "LOC-COLD-BUF-001",
+   "Descripción": "Cold buffer",
+   "Padre/Ref": "AREA-WH-COLD-01",
+   "Propiedades": "capacity_hu=8; temp=2..8C",
+   "Clasificación": "ANON"
+  },
+  {
+   "Tipo": "LOCATION",
+   "ID": "LOC-DISP-BUF-001",
+   "Descripción": "Dispensing input buffer",
+   "Padre/Ref": "AREA-DISP-01",
+   "Propiedades": "capacity_hu=6",
+   "Clasificación": "ANON"
+  },
+  {
+   "Tipo": "LOCATION",
+   "ID": "LOC-PROC-BUF-001",
+   "Descripción": "Process input buffer",
+   "Padre/Ref": "AREA-PROC-01",
+   "Propiedades": "capacity_hu=10",
+   "Clasificación": "ANON"
+  },
+  {
+   "Tipo": "EQUIPMENT",
+   "ID": "EQ-DISP-01",
+   "Descripción": "Dispensing booth",
+   "Padre/Ref": "AREA-DISP-01",
+   "Propiedades": "class=DISP_BOOTH",
+   "Clasificación": "ANON"
+  },
+  {
+   "Tipo": "EQUIPMENT",
+   "ID": "EQ-SCALE-01",
+   "Descripción": "Floor scale",
+   "Padre/Ref": "AREA-DISP-01",
+   "Propiedades": "class=SCALE",
+   "Clasificación": "ANON"
+  },
+  {
+   "Tipo": "EQUIPMENT",
+   "ID": "EQ-MIX-01",
+   "Descripción": "Process unit",
+   "Padre/Ref": "AREA-PROC-01",
+   "Propiedades": "class=MIXER",
+   "Clasificación": "ANON"
+  },
+  {
+   "Tipo": "EQUIPMENT",
+   "ID": "EQ-PACK-01",
+   "Descripción": "Packaging line",
+   "Padre/Ref": "AREA-PACK-01",
+   "Propiedades": "class=PACK_LINE",
+   "Clasificación": "ANON"
+  },
+  {
+   "Tipo": "MATERIAL",
+   "ID": "MAT-000001",
+   "Descripción": "API class material",
+   "Padre/Ref": "-",
+   "Propiedades": "lot_controlled=1;fefo=1",
+   "Clasificación": "ANON"
+  },
+  {
+   "Tipo": "MATERIAL",
+   "ID": "MAT-000002",
+   "Descripción": "Excipient class material",
+   "Padre/Ref": "-",
+   "Propiedades": "lot_controlled=1;fefo=1",
+   "Clasificación": "ANON"
+  },
+  {
+   "Tipo": "MATERIAL",
+   "ID": "MAT-000003",
+   "Descripción": "Packaging component",
+   "Padre/Ref": "-",
+   "Propiedades": "lot_controlled=1",
+   "Clasificación": "ANON"
+  },
+  {
+   "Tipo": "LOT",
+   "ID": "LOT-000001",
+   "Descripción": "Synthetic lot",
+   "Padre/Ref": "MAT-000001",
+   "Propiedades": "quality=RELEASED",
+   "Clasificación": "ANON"
+  },
+  {
+   "Tipo": "HU",
+   "ID": "HU-0000001",
+   "Descripción": "Synthetic pallet",
+   "Padre/Ref": "LOT-000001",
+   "Propiedades": "qty=100.000 kg",
+   "Clasificación": "ANON"
+  },
+  {
+   "Tipo": "PERSON",
+   "ID": "USR-0001",
+   "Descripción": "Pseudonymized operator",
+   "Padre/Ref": "ROLE-DISP-OP",
+   "Propiedades": "qualified=1",
+   "Clasificación": "ANON"
+  }
+ ]
+}

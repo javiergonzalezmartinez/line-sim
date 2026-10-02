@@ -1,0 +1,141 @@
+{
+ "_source": "Spec provided by Javi (synthetic / anonymised digital-twin workbook, sheet 15_CONTROLES_GXP). Public standards cited in the workbook (NIST, OPC UA, GS1 EPCIS, EU Annex 11, 21 CFR 11, ISA-88/95). Not real plant data.",
+ "records": [
+  {
+   "ID": "GXP-001",
+   "Control": "Risk management",
+   "Expectativa": "Risk-based validation/data-integrity controls",
+   "Implementación en gemelo": "Model rules and scenarios have criticality + provenance",
+   "Referencia": "Annex 11 §1",
+   "Fuente": "PUB-013"
+  },
+  {
+   "ID": "GXP-002",
+   "Control": "Validation",
+   "Expectativa": "Accuracy/reliability/intended performance",
+   "Implementación en gemelo": "Golden scenarios + deterministic replay + VVUQ",
+   "Referencia": "21 CFR 11.10(a); Annex 11 §4",
+   "Fuente": "PUB-014;PUB-013"
+  },
+  {
+   "ID": "GXP-003",
+   "Control": "System inventory",
+   "Expectativa": "Up-to-date inventory and system description",
+   "Implementación en gemelo": "Architecture/endpoint/interface sheets versioned",
+   "Referencia": "Annex 11 §4.3",
+   "Fuente": "PUB-013"
+  },
+  {
+   "ID": "GXP-004",
+   "Control": "URS traceability",
+   "Expectativa": "Requirements traceable through lifecycle",
+   "Implementación en gemelo": "Requirement/control/scenario IDs",
+   "Referencia": "Annex 11 §4.4",
+   "Fuente": "PUB-013"
+  },
+  {
+   "ID": "GXP-005",
+   "Control": "Data transfer",
+   "Expectativa": "Verify data value/meaning preserved",
+   "Implementación en gemelo": "Schema validation + reconciliation events",
+   "Referencia": "Annex 11 §4.8",
+   "Fuente": "PUB-013"
+  },
+  {
+   "ID": "GXP-006",
+   "Control": "Accuracy checks",
+   "Expectativa": "Critical manual entry gets independent/validated check",
+   "Implementación en gemelo": "manual_entry -> second_check event",
+   "Referencia": "Annex 11 §6",
+   "Fuente": "PUB-013"
+  },
+  {
+   "ID": "GXP-007",
+   "Control": "Data storage",
+   "Expectativa": "Accessible/readable/accurate retained data",
+   "Implementación en gemelo": "Immutable event store + backups + restore test",
+   "Referencia": "Annex 11 §7",
+   "Fuente": "PUB-013"
+  },
+  {
+   "ID": "GXP-008",
+   "Control": "Audit trails",
+   "Expectativa": "GMP-relevant changes/deletions recorded with reason",
+   "Implementación en gemelo": "AuditRecord + immutable hash + review flags",
+   "Referencia": "Annex 11 §9; 21 CFR 11.10(e)",
+   "Fuente": "PUB-013;PUB-014"
+  },
+  {
+   "ID": "GXP-009",
+   "Control": "Operational checks",
+   "Expectativa": "Permitted sequencing enforced",
+   "Implementación en gemelo": "State-machine guards + command transitions",
+   "Referencia": "21 CFR 11.10(f)",
+   "Fuente": "PUB-014"
+  },
+  {
+   "ID": "GXP-010",
+   "Control": "Authority checks",
+   "Expectativa": "Only authorized individuals perform operation",
+   "Implementación en gemelo": "RBAC + qualification guards",
+   "Referencia": "21 CFR 11.10(g); Annex 11 §12",
+   "Fuente": "PUB-014;PUB-013"
+  },
+  {
+   "ID": "GXP-011",
+   "Control": "Device checks",
+   "Expectativa": "Validate source/input device where appropriate",
+   "Implementación en gemelo": "terminal_id/device_id + handshake/source checks",
+   "Referencia": "21 CFR 11.10(h)",
+   "Fuente": "PUB-014"
+  },
+  {
+   "ID": "GXP-012",
+   "Control": "Security",
+   "Expectativa": "Access authorization lifecycle recorded",
+   "Implementación en gemelo": "Access events and role assignments audited",
+   "Referencia": "Annex 11 §12",
+   "Fuente": "PUB-013"
+  },
+  {
+   "ID": "GXP-013",
+   "Control": "Incident management",
+   "Expectativa": "All incidents assessed; critical RCA/CAPA",
+   "Implementación en gemelo": "FailureEvent/Deviation links",
+   "Referencia": "Annex 11 §13",
+   "Fuente": "PUB-013"
+  },
+  {
+   "ID": "GXP-014",
+   "Control": "Electronic signature",
+   "Expectativa": "Signer, time, meaning; linked to record",
+   "Implementación en gemelo": "ElectronicSignature entity with linked hash",
+   "Referencia": "21 CFR 11.50/11.70; Annex 11 §14",
+   "Fuente": "PUB-014;PUB-013"
+  },
+  {
+   "ID": "GXP-015",
+   "Control": "Business continuity",
+   "Expectativa": "Critical-process fallback documented/tested",
+   "Implementación en gemelo": "Scenario for endpoint/equipment outage + fallback mode",
+   "Referencia": "Annex 11 §16",
+   "Fuente": "PUB-013"
+  },
+  {
+   "ID": "GXP-016",
+   "Control": "Archiving",
+   "Expectativa": "Accessibility/readability/integrity maintained",
+   "Implementación en gemelo": "Archive retrieval test scenario",
+   "Referencia": "Annex 11 §17",
+   "Fuente": "PUB-013"
+  },
+  {
+   "ID": "GXP-017",
+   "Control": "Data integrity",
+   "Expectativa": "Reliable and accurate data",
+   "Implementación en gemelo": "source timestamp, quality, audit, reconciliation",
+   "Referencia": "FDA Data Integrity guidance",
+   "Fuente": "PUB-015"
+  }
+ ]
+}
