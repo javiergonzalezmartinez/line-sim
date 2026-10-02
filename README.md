@@ -257,7 +257,7 @@ The wear rule is this code's own assumption, not taken from any source, and all 
 
 ## One-command offline demo (M34)
 
-`python3 -m plantsim.demo demo_out` runs the CLI on the bundled synthetic examples and writes all 19 HTML pages plus `demo_out/index.html` (no network, no dependencies). Fictitious plant; example values are illustrative placeholders. `tests/test_demo.py` checks that every flag used in the README exists in `cli.py` and that all pages are produced.
+`python3 -m plantsim.demo demo_out` runs the CLI on the bundled synthetic examples and writes all 20 HTML pages plus `demo_out/index.html` (no network, no dependencies). Fictitious plant; example values are illustrative placeholders. `tests/test_demo.py` checks that every flag used in the README exists in `cli.py` and that all pages are produced.
 
 ## Pareto of lost hours (M35)
 
@@ -266,3 +266,7 @@ The wear rule is this code's own assumption, not taken from any source, and all 
 ## Due dates and EDD dispatch (M37)
 
 Plant keys `due_h` (hours after release, a number or `{product: hours}`) and `dispatch: "edd"` (earliest due date first, event-driven engine). `python -m plantsim.cli examples/due_fifo.json --whatif examples/due_edd.json --seeds 20 --whatif-view due.html` compares FIFO with EDD and adds tardy share, mean tardiness and maximum lateness (lateness = completion minus due date, as defined in the UCSB scheduling notes, https://sites.cs.ucsb.edu/~suri/ccs130a/Scheduling.pdf, read 2 Oct 2026; those notes state that EDD minimises the maximum lateness on a single machine). In this plant, with several stages, queues that fill up and changeovers, that result is not guaranteed: only the simulation shows it. Due dates in the examples are placeholders and the plant is overloaded by them (most lots tardy). Not modelled: customer priorities, due-date setting rules, expediting, partial deliveries.
+
+## Queue rules: SPT and critical ratio (M38)
+
+`dispatch` also accepts `spt` (shortest process time at the stage first) and `cr` (smallest critical ratio, time left to the due date over remaining process work, first). Plant key `hours_factor` ({product: factor}) scales process times per product in the event-driven engine; without different factors SPT equals FIFO and CR equals EDD (tests check the SPT case). `python -m plantsim.cli examples/rules.json --rules-sweep rules.html --seeds 10` compares FIFO, EDD, SPT and CR on the same seeds with 95% CI. Definitions as read at https://www.uky.edu/~dsianita/300/schedule.html and https://metricgate.com/docs/critical-ratio-dispatch-rule/ (2 Oct 2026). Remaining work counts nominal process hours only (no queues, changeovers, moves). Factors and due dates are placeholders. Not modelled: setup-aware variants, release control, due-date setting rules.

@@ -56,16 +56,19 @@ class Plant:
     speed_kmh: float = 6.0
     handling_min: float = 6.0
     dispatch: str = "fifo"            # queue rule of the event-driven engine: "fifo" or "same_product_first" (avoid changeovers)
+    hours_factor: object = None       # {product: factor} multiplies the process time of process stages in the event-driven engine (placeholder values; lets SPT and CR differ from FIFO/EDD)
     due_h: object = None              # due date = release + due_h (hours); a number for all products or {product: hours}. Placeholder values only
     dispatch_max_wait_h: Optional[float] = None   # same_product_first: a lot that has waited longer than this goes first (guard against starvation)
 
     def __post_init__(self):
         if not self.stages or not self.products:
             raise ValueError("need stages and products")
-        if self.dispatch not in ("fifo", "same_product_first", "edd"):
-            raise ValueError("dispatch must be fifo, same_product_first or edd")
-        if self.dispatch == "edd" and self.due_h is None:
-            raise ValueError("dispatch edd needs due_h")
+        if self.dispatch not in ("fifo", "same_product_first", "edd", "spt", "cr"):
+            raise ValueError("dispatch must be fifo, same_product_first, edd, spt or cr")
+        if self.dispatch in ("edd", "cr") and self.due_h is None:
+            raise ValueError("dispatch edd and cr need due_h")
+        if self.hours_factor is not None and (any(p not in self.hours_factor for p in self.products) or any(v <= 0 for v in self.hours_factor.values())):
+            raise ValueError("hours_factor must be > 0 and cover every product")
         if self.due_h is not None:
             dv = self.due_h.values() if isinstance(self.due_h, dict) else [self.due_h]
             if any(v <= 0 for v in dv) or (isinstance(self.due_h, dict) and any(p not in self.due_h for p in self.products)):
@@ -106,6 +109,13 @@ class Plant:
                 elif s.kind != "move" and s.loc not in ids:
                     raise ValueError(f"{s.name}: loc {s.loc!r} is not in the layout")
         self.resolve_moves()
+
+    def factor(self, product) -> float:
+        return 1.0 if self.hours_factor is None else self.hours_factor[product]
+
+    def remaining_work(self, k, product) -> float:
+        """Nominal process hours still to do from stage k on (process stages only; no queues, changeovers, moves or waits)."""
+        return sum(s.hours for s in self.stages[k:] if s.kind == "process") * self.factor(product)
 
     def due_date(self, b) -> float:
         d = self.due_h[b.product] if isinstance(self.due_h, dict) else self.due_h
@@ -253,7 +263,7 @@ def _next_wave(t: float, waves: List[float]) -> float:
 
 
 def simulate(plant: Plant) -> Result:
-    if plant.dispatch == "edd" or any(s.buffer is not None or s.pm_every_h for s in plant.stages):
+    if plant.dispatch in ("edd", "spt", "cr") or plant.hours_factor is not None or any(s.buffer is not None or s.pm_every_h for s in plant.stages):
         return simulate_des(plant)
     return simulate_fifo(plant)
 
@@ -482,6 +492,10 @@ def simulate_des(plant: Plant) -> Result:
                         break
             if plant.dispatch == "edd":                    # earliest due date first (Suri, UCSB notes: EDD minimises maximum lateness on one machine)
                 pos = min(range(len(queue[k])), key=lambda j: (plant.due_date(batches[queue[k][j][1]]), queue[k][j][0]))
+            elif plant.dispatch == "spt":                  # shortest processing time at this stage first
+                pos = min(range(len(queue[k])), key=lambda j: (S[k].hours * plant.factor(batches[queue[k][j][1]].product), queue[k][j][0]))
+            elif plant.dispatch == "cr":                   # smallest critical ratio first: (due - now) / remaining nominal work
+                pos = min(range(len(queue[k])), key=lambda j: ((plant.due_date(batches[queue[k][j][1]]) - now) / max(plant.remaining_work(k, batches[queue[k][j][1]].product), 1e-9), queue[k][j][0]))
             _, i = queue[k].pop(pos)
             b, s = batches[i], S[k]
             rec = cur_trace[i]
@@ -503,7 +517,7 @@ def simulate_des(plant: Plant) -> Result:
                     stats[k].short_hours += m
                 cur += m
             rec[2] = cur
-            dur = _gamma(rng, s.hours, s.cv)
+            dur = _gamma(rng, s.hours * plant.factor(b.product), s.cv)
             while True:
                 credit("busy", k, cur, cur + dur)
                 cur += dur
@@ -513,7 +527,7 @@ def simulate_des(plant: Plant) -> Result:
                     credit("repair", k, cur, cur + r)
                     cur += r
                 if s.retest_p and rng.random() < s.retest_p:
-                    dur = _gamma(rng, s.hours, s.cv)
+                    dur = _gamma(rng, s.hours * plant.factor(b.product), s.cv)
                     continue
                 break
             rec[3] = rec[4] = cur

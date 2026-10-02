@@ -17,7 +17,7 @@ class T(unittest.TestCase):
 
     def test_bad_rule_rejected(self):
         with self.assertRaises(ValueError):
-            dataclasses.replace(A, dispatch="spt")
+            dataclasses.replace(A, dispatch="lifo")
 
     def test_single_product_rule_changes_nothing(self):
         a = dataclasses.replace(A, products=["A"]); b = dataclasses.replace(B, products=["A"])
