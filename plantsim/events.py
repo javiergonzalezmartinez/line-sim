@@ -11,6 +11,7 @@ import hashlib
 import json
 import re
 import uuid
+from .fsm import Machine, state_hash
 from datetime import datetime, timedelta, timezone
 from typing import Iterable, List
 
@@ -34,7 +35,7 @@ def events(plant, result, schema_version: str = "2.0") -> List[dict]:
         last = [None]
         seq = [0]
 
-        def emit(cls, etype, action, t, k=None, result_="OK", disp=None):
+        def emit(cls, etype, action, t, k=None, result_="OK", disp=None, st=None):
             seq[0] += 1
             s = plant.stages[k] if k is not None else None
             e = {
@@ -47,25 +48,44 @@ def events(plant, result, schema_version: str = "2.0") -> List[dict]:
                 "equipment_id": f"EQ-STAGE-{k + 1:02d}" if k is not None and s.kind in ("process", "move") else None,
                 "disposition": disp, "result": result_, "schema_version": schema_version,
             }
+            if st:
+                e["state_before_hash"], e["state_after_hash"] = state_hash(st[0], st[1]), state_hash(st[0], st[2])
+                e["reason_code"] = f"{st[0]}:{st[1]}>{st[2]}"
             e["payload_hash"] = _hash(e)
             last[0] = e["event_id"]
             out.append(e)
 
-        emit("OBJECT", "lot.released", "ADD", b.released, disp="in_progress")
+        job = Machine("JOB_ORDER", "NOT_ALLOWED_TO_START", lot)
+        jb, ja = job.fire("Start")
+        emit("OBJECT", "lot.released", "ADD", b.released, disp="in_progress", st=("JOB_ORDER", jb, ja))
+        first = True
         for rec in b.trace:
             k, arrive, start, end = rec[0], rec[1], rec[2], rec[3]
             s = plant.stages[k]
+            ph = Machine("PHASE_EXECUTION", "QUEUED", f"{lot}/{k}")
             emit("OBJECT", "queue.entered", "OBSERVE", arrive, k)
-            emit("CONTROL", "phase.started", "EXECUTE", start, k)
-            last_stage = k == len(plant.stages) - 1
+            bf, af = ph.fire("phase.ready")
+            emit("CONTROL", "phase.ready", "EXECUTE", start, k, st=("PHASE_EXECUTION", bf, af))
+            bf, af = ph.fire("phase.started")
+            emit("CONTROL", "phase.started", "EXECUTE", start, k, st=("PHASE_EXECUTION", bf, af))
+            if first:
+                job.fire("ExecutionBegins")
+                first = False
             rej = b.rejected and s.kind == "hold" and b.done is not None and abs(end - b.done) < 1e-9
-            if s.kind in ("process", "move"):
-                emit("TRANSFORMATION" if s.kind == "process" else "OBJECT", "phase.completed", "EXECUTE" if s.kind == "process" else "OBSERVE", end, k)
+            ev = "phase.aborted" if rej else "phase.completed"
+            bf, af = ph.fire(ev)
+            if rej:
+                emit("OBJECT", ev, "OBSERVE", end, k, "REJECTED", "rejected", st=("PHASE_EXECUTION", bf, af))
+            elif s.kind in ("process", "move"):
+                emit("TRANSFORMATION" if s.kind == "process" else "OBJECT", ev, "EXECUTE" if s.kind == "process" else "OBSERVE", end, k,
+                     st=("PHASE_EXECUTION", bf, af))
             else:
-                emit("OBJECT", "phase.completed", "OBSERVE", end, k, "REJECTED" if rej else "OK", "rejected" if rej else None)
+                emit("OBJECT", ev, "OBSERVE", end, k, st=("PHASE_EXECUTION", bf, af))
         if b.done is not None:
+            jev = "Abort" if b.rejected else "StopOrNaturalEnd"
+            bf, af = job.fire(jev)
             emit("TRANSACTION", "lot.rejected" if b.rejected else "lot.dispatched", "DELETE" if b.rejected else "OBSERVE", b.done,
-                 result_="REJECTED" if b.rejected else "OK", disp="rejected" if b.rejected else "dispatched")
+                 result_="REJECTED" if b.rejected else "OK", disp="rejected" if b.rejected else "dispatched", st=("JOB_ORDER", bf, af))
     out.sort(key=lambda e: (e["event_time"], e["correlation_id"], e["sequence_no"]))
     return out
 
@@ -137,10 +157,10 @@ def render_html(evs: List[dict], lot: str, title: str = "Event log of one lot (s
         f'<tr><td>{e["sequence_no"]}</td><td>{escape(e["event_time"][:19].replace("T", " "))}</td>'
         f'<td><span style="background:{col.get(e["event_class"], "#555")}">{e["event_class"]}</span></td>'
         f'<td>{escape(e["event_type"])}</td><td>{e["action"]}</td><td>{escape(e["business_step"] or "")}</td>'
-        f'<td>{escape(e["equipment_id"] or "")}</td><td>{e["result"]}</td><td class="h">{e["payload_hash"][:10]}</td></tr>' for e in rows)
+        f'<td>{escape(e["equipment_id"] or "")}</td><td>{escape((e.get("reason_code") or "").replace("PHASE_EXECUTION:", "PHASE ").replace("JOB_ORDER:", "JOB "))}</td><td>{e["result"]}</td><td class="h">{e["payload_hash"][:10]}</td></tr>' for e in rows)
     return (f'<!doctype html><html><head><meta charset="utf-8"><title>{escape(title)}</title><style>body{{font:13px system-ui,sans-serif;margin:16px;color:#111}}'
             'table{border-collapse:collapse;width:100%}th{background:#0b1226;color:#fff;text-align:left;padding:5px 8px}td{padding:4px 8px;border-bottom:1px solid #dde3ea}'
             'span{color:#fff;padding:1px 7px;border-radius:9px;font-size:11px}.h{font-family:monospace;color:#667}.n{background:#fff4d6;border-left:4px solid #c98a00;padding:6px 10px;margin:8px 0}</style></head><body>'
             f'<h2>{escape(title)} · {escape(lot)}</h2><div class="n">Illustrative: events of a simulated lot, synthetic ids, not real plant data.</div>'
-            '<table><tr><th>#</th><th>Time (synthetic date)</th><th>Class</th><th>Type</th><th>Action</th><th>Step</th><th>Equipment</th><th>Result</th><th>Hash</th></tr>'
+            '<table><tr><th>#</th><th>Time (synthetic date)</th><th>Class</th><th>Type</th><th>Action</th><th>Step</th><th>Equipment</th><th>State change</th><th>Result</th><th>Hash</th></tr>'
             f'{body}</table></body></html>')
