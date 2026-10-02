@@ -257,7 +257,7 @@ The wear rule is this code's own assumption, not taken from any source, and all 
 
 ## One-command offline demo (M34)
 
-`python3 -m plantsim.demo demo_out` runs the CLI on the bundled synthetic examples and writes all 22 HTML pages plus `demo_out/index.html` (no network, no dependencies). Fictitious plant; example values are illustrative placeholders. `tests/test_demo.py` checks that every flag used in the README exists in `cli.py` and that all pages are produced.
+`python3 -m plantsim.demo demo_out` runs the CLI on the bundled synthetic examples and writes all 23 HTML pages plus `demo_out/index.html` (no network, no dependencies). Fictitious plant; example values are illustrative placeholders. `tests/test_demo.py` checks that every flag used in the README exists in `cli.py` and that all pages are produced.
 
 ## Pareto of lost hours (M35)
 
@@ -282,3 +282,7 @@ Plant keys `due_h` (hours after release, a number or `{product: hours}`) and `di
 ## Seeds needed to see a difference (M43)
 
 Every "not clear" row of a what-if page now shows a rough planning figure: if the observed mean difference were the true one, about n x (half-width / |difference|)^2 seeds would make the paired interval just exclude 0 (the half-width shrinks like 1/sqrt(n), NIST e-Handbook 7.2.2.1, read 2 Oct 2026; the change of the t quantile is ignored). It is not evidence that the difference exists: a difference near 0 may simply not be real. Not shown when the interval already excludes 0 or the difference is about 0.
+
+## One-at-a-time sensitivity (M44)
+
+`python -m plantsim.cli examples/pharma_flow.json --sens-view tornado.html --sens-pct 0.2 --seeds 10` varies each non-zero input (per process stage: process time, changeover, breakdown probability, repair time; plus the plant release interval) to -20% and +20% with the rest at nominal, over the same seeds, and draws tornado bars for throughput and lead time, largest range on top. Method as read at https://docs.analytica.com/index.php/Tornado_charts and https://help.goldsim.com/Content/GS/sensitivityanalysistornadochart.htm (2 Oct 2026; same relative change for every input is one of the options listed there). Bars shorter than twice the 95% half-width of the nominal mean are faded as "within noise" (a rule of this code). In the pharma_flow example the release interval moves throughput about 10 times more than any machine parameter: with these placeholders the plant is limited by what is released, not by its machines. All parameters are placeholders, so the ranking says which placeholders matter, not what a real plant does. Interactions are not seen; several inputs together are not varied.
