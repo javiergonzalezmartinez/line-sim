@@ -27,7 +27,7 @@ class Station:
 @dataclass
 class Config:
     stations: List[Station]
-    buffers: List[int]                # capacity between station i and i+1 (len = stations - 1)
+    buffers: List[int]                # capacity between station i and i+1 (len = stations - 1); 0 = direct hand-off
     duration: float = 8 * 3600.0
     warmup: float = 3600.0
     seed: int = 1
@@ -35,8 +35,8 @@ class Config:
     def __post_init__(self) -> None:
         if len(self.buffers) != len(self.stations) - 1:
             raise ValueError("buffers must have one entry between each pair of stations")
-        if any(b < 1 for b in self.buffers):
-            raise ValueError("buffer capacities must be >= 1 (direct hand-off without a buffer is not modelled)")
+        if any(b < 0 for b in self.buffers):
+            raise ValueError("buffer capacities must be >= 0 (0 = direct hand-off, the finished part waits in the station)")
         if self.warmup >= self.duration:
             raise ValueError("warmup must be shorter than duration")
 
@@ -130,7 +130,12 @@ def simulate(cfg: Config) -> Result:
         while changed:
             changed = False
             for i in range(n - 1, -1, -1):             # downstream first so space frees upstream
-                if state[i] == BLOCKED:
+                if state[i] == BLOCKED and i < n - 1 and cfg.buffers[i] == 0:
+                    if state[i + 1] == IDLE:           # no buffer: hand the part straight to a waiting station
+                        set_state(i, IDLE, now)
+                        start(i + 1, now)
+                        changed = True
+                elif state[i] == BLOCKED:
                     if i == n - 1 or buf[i] < cfg.buffers[i]:
                         if i < n - 1:
                             buf[i] += 1

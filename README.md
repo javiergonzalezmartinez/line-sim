@@ -8,7 +8,7 @@ Discrete-event simulator of a serial production line with finite buffers, random
 The example line is fictitious and illustrative. It does not describe any real plant.
 
 ## What you learn here
-Why a line runs below its slowest station: blocking and starving, failures, and what a buffer is worth. Buffer size 0 (direct hand-off) is not modelled; minimum is 1.
+Why a line runs below its slowest station: blocking and starving, failures, and what a buffer is worth. Buffer size 0 (direct hand-off, the finished part waits in its station) is modelled in linesim; the plant view still clamps to 1.
 
 ## Whole-plant model (plantsim)
 Batch flow of a fictitious oral-solid-dose plant, warehouse receipt to dispatch: receipt and quarantine, QC sampling and release (day shift), dispensing, granulation, compression, coating, packaging, QC lab release (retests), QA record review, dispatch waves. Changeover and cleaning when the product changes, breakdowns, working calendars.

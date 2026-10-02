@@ -20,7 +20,7 @@ def main(argv=None) -> int:
     ap = argparse.ArgumentParser(prog="linesim", description="Serial production line simulator")
     ap.add_argument("config")
     ap.add_argument("--out", default="report.html")
-    ap.add_argument("--sizes", default="1,2,4,8,16,32", help="buffer sizes for the sweep")
+    ap.add_argument("--sizes", default="0,1,2,4,8,16,32", help="buffer sizes for the sweep")
     a = ap.parse_args(argv)
     cfg = load(a.config)
     res = simulate(cfg)
