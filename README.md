@@ -22,10 +22,11 @@ Everything is **synthetic**: no real plant, company or personal data. Parameters
 | ![Quality](docs/img/m18_quality.png) **Quality holds and rejections** | ![Process value](docs/img/m21_process.png) **Process value with deadband** |
 | ![Material](docs/img/m10_material.png) **Material shortages** | ![Faults](docs/img/m22_faults.png) **Injected sensor faults and excursions** |
 | ![What-if](docs/img/m23_whatif.png) **What-if A vs B** with 95% confidence intervals | ![Replay export](docs/img/m24_mqtt.png) **Sparkplug-style messages** and OPC UA-style nodes |
+| ![Energy](docs/img/m25_energy.png) **Energy per stage** (placeholder kW) | |
 
 ## Milestones
 
-M1-M6 line simulator, plant model, signal layer, finite buffers and blocking. M7 buffer size 0. M8 capacity on wait stages. M9 shifts and breaks. M10 material shortages. M11 canonical events and schema validator. M12 8 state machines. M13 machine signals. M14 KPIs. M15 interface handshakes and a seed scenario. M16 handling units and pallets. M17 forklift/AGV transport. M18 quality status. M19 live dashboard. M21 analog process values. M22 fault injection (drift, step, stochastic excursion, calibration overdue). M23 what-if comparator with confidence intervals. M24 Sparkplug-style MQTT replay and OPC UA-style node list. Each one has tests and a section below.
+M1-M6 line simulator, plant model, signal layer, finite buffers and blocking. M7 buffer size 0. M8 capacity on wait stages. M9 shifts and breaks. M10 material shortages. M11 canonical events and schema validator. M12 8 state machines. M13 machine signals. M14 KPIs. M15 interface handshakes and a seed scenario. M16 handling units and pallets. M17 forklift/AGV transport. M18 quality status. M19 live dashboard. M21 analog process values. M22 fault injection (drift, step, stochastic excursion, calibration overdue). M23 what-if comparator with confidence intervals. M24 Sparkplug-style MQTT replay and OPC UA-style node list. M25 energy calculator (placeholder kW). Each one has tests and a section below.
 
 ## What is real, illustrative, or not modelled
 
@@ -185,3 +186,11 @@ Not modelled: common random numbers across different structures (the paired diff
 Turns the telemetry events into a file of MQTT messages whose topics follow the Eclipse Sparkplug namespace, `spBv1.0/<group>/<NBIRTH|DBIRTH|DDATA|NDEATH>/<edge node>/<device>` (Sparkplug specification 2.2 and the 3.x asciidoc, read 2 Oct 2026). `seq` runs 0-255 and wraps; each device gets a DBIRTH at its first event and DDATA afterwards. Group, node, device and signal ids are synthetic.
 
 Not real Sparkplug on the wire: payloads are JSON, real Sparkplug B uses Protocol Buffers. DBIRTH here carries only the first metric seen, while the specification expects the full metric set of the device. No broker, QoS, retained flags, NCMD/DCMD or primary-host STATE. The node list (76 variable nodes in the example) is flat: NodeId in a string namespace, BrowseName, DataType. It is not an OPC UA NodeSet and no server exists. Tests check topic shape, continuous seq with wrap, birth before data per device, unique node ids and matching change counts.
+
+## M25: energy per stage and per lot (synthetic, placeholder kW)
+
+`python -m plantsim.cli examples/energy_demo.json --energy energy.html`
+
+Energy is power times time: 1 kWh is 1 kW for 1 hour, 3.6 MJ (Wikipedia, kilowatt-hour, read 2 Oct 2026). The calculator takes the hours each machine spends in process, setup, repair and idle from the simulation and multiplies them by the kW you put under the config key `energy` (`default` for process stages, `stages` per stage name). It reports kWh per stage and state, per week, and per finished lot (window energy divided by lots finished in the window, a plant average).
+
+Every kW value in `examples/energy_demo.json` is an illustrative placeholder, not a measurement of any machine. Stages without a power entry are listed as "no kW configured". The ISO 50001 page was only seen as a listing, the standard was not read, so there is no claim of conformity. Not modelled: part-load curves, start-up peaks, HVAC, cleanroom and compressed-air base load, cost, CO2, vehicle energy unless given as a stage, per-lot tracing. Tests check kWh = kW x hours, hours add up to capacity, doubling kW doubles energy, defaults apply only to machines.
