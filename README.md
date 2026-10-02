@@ -91,3 +91,17 @@ Parameters (`hu_per_lot`, `hu_per_pallet`, `release_delay_h`, `ship_delay_h`) co
 - It is an overlay: the vehicle carries the load for the modelled move time, and a late vehicle does not delay the plant model. No travel time is invented. A task is requested when the plant model starts the move.
 - Parameters (`fleet_size`, `accept_h`, `route_block_p/h`, `due_h`) come from the `transport` key. The spec has no values: defaults mean unlimited vehicles, no blocking, and KPI-006/014 not computed. `examples/transport_stress.json` is a stress variant with illustrative values so the fleet size matters.
 - Not modelled: move.timeout and retry, cancelled tasks, travel to the pick-up point, charging, routes.
+
+## M18: quality status, holds and rejections (synthetic)
+
+`python3 -m plantsim examples/seed_scenario.json --quality q.jsonl --quality-view q.html` emits QUALITY_STATUS state-machine events for every finished lot (release after sample and lab, deviation hold then release, rejection, optional extra hold after release) and computes KPI-023 HoldExposure and KPI-011 FirstPassYield at lot level. Holds and rejections reuse the plant model's own QA hold stage, so the plant and the event log agree (a test checks the rejected lots match). Sample time, lab time and extra holds come from the `quality` key; the spec has no values, so the defaults add nothing (the seed scenario's values are illustrative). Not modelled: expiry (needs a shelf life, TBD), retests, partial release.
+
+## What the twin covers of the spec (honest list)
+
+| Spec item | Status |
+|---|---|
+| State machines (8) | all 8 used: JOB_ORDER, PHASE_EXECUTION, MESSAGE, HANDLING_UNIT, TRANSPORT_TASK, QUALITY_STATUS. MACHINERY_ITEM_STATE and MACHINERY_OPERATION_MODE through the signals |
+| Signals (46) | 5 produced (SIG-0001/0002/0003/0004/0010). The other 41 (temperature, pressure, mass, flow, barcode, RFID, ...) have no basis in the simulation and are NOT produced |
+| Failure modes (30) | modelled: FME-005 (hold after release, `hold_p`), FME-008 (destination full, via finite buffers), FME-009/013 (ACK lost/timeout), FME-010 (route blocked, `route_block_p`), FME-011 (duplicate), FME-014 (rejection), FME-016 (breakdown). NOT modelled: the other 22 (identity, stock mismatch, expiry, scale, calibration, excursions, human errors, printing, cold chain, audit/backup) |
+| KPIs (26) | computed: 001-006 (006 also for the vehicle fleet), 011 (lot level), 014 (only with `due_h`), 015-018, 023, 026. Not computed (no basis in the sim): 007-010 blocking/starvation/setup/downtime fractions, 012-013 inventory and FEFO, 019-022 data freshness, clock skew, audit and signatures, 024-025 excursions and rework |
+| Parameters marked TBD | stay TBD: the examples use labelled illustrative values |

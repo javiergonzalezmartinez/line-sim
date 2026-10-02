@@ -88,6 +88,15 @@
    "hours": 4,
    "cv": 0.2,
    "loc": "AREA-PACK-01"
+  },
+  {
+   "name": "Deviation investigation (QA hold)",
+   "kind": "hold",
+   "p": 0.15,
+   "hours": 24,
+   "cv": 0.5,
+   "reject_p": 0.3,
+   "loc": "AREA-QA-01"
   }
  ],
  "handling": {
@@ -102,5 +111,12 @@
   "fleet_size": 2,
   "accept_h": 0.05,
   "due_h": 1.0
+ },
+ "quality": {
+  "_note": "ILLUSTRATIVE placeholders (no spec values): 1 h to sample, 8 h lab, 4% extra holds of 6 h.",
+  "sample_h": 1.0,
+  "lab_h": 8.0,
+  "hold_p": 0.04,
+  "hold_h": 6.0
  }
 }
