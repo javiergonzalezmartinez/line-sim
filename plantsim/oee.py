@@ -56,7 +56,7 @@ def render_html(rows: List[Dict], focus: str = "") -> str:
              ("Rejected lots", -f["ideal_h"] * (f["rejected"] / f["lots"] if f["lots"] else 0), "#e03131"), ("Fully productive", None, "#2b8a3e")]
     W, bh, lw = 760, 24, 250
     tot = f["planned_h"]
-    sx = lambda v: lw + (W - lw - 20) * v / tot
+    sx = lambda v: lw + (W - lw - 90) * v / tot
     svg = [f'<svg width="{W}" height="{bh * len(steps) + 20}" font-size="11">']
     level = tot
     for i, (name, d, c) in enumerate(steps):
