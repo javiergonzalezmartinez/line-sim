@@ -24,6 +24,9 @@ class Stage:
     changeover: float = 0.0         # cleaning + changeover when product differs from the last one
     breakdown_p: float = 0.0        # probability of a breakdown during a batch
     repair: float = 0.0             # mean repair time (h)
+    pm_every_h: Optional[float] = None   # preventive maintenance after this many run-hours (event-driven engine only)
+    pm_hours: float = 0.0           # duration of one preventive maintenance (h)
+    wear_per_100h: float = 0.0      # relative rise of breakdown_p per 100 run-hours since the last preventive maintenance (0 = constant, as before)
     window: Optional[tuple] = None  # (open_hour, close_hour) on working days, None = 24/7
     workdays: int = 7               # 5 = Monday-Friday only
     retest_p: float = 0.0           # probability that the step has to be repeated (e.g. OOS investigation)
@@ -126,6 +129,7 @@ class StageStat:
     busy: float = 0.0
     setup: float = 0.0
     repair: float = 0.0
+    pm: float = 0.0
     wait: float = 0.0
     batches: int = 0
     max_queue_wait: float = 0.0
@@ -238,7 +242,7 @@ def _next_wave(t: float, waves: List[float]) -> float:
 
 
 def simulate(plant: Plant) -> Result:
-    if any(s.buffer is not None for s in plant.stages):
+    if any(s.buffer is not None or s.pm_every_h for s in plant.stages):
         return simulate_des(plant)
     return simulate_fifo(plant)
 
@@ -471,6 +475,10 @@ def simulate_des(plant: Plant) -> Result:
             start = now
             wait = start - rec[1]
             cur = start
+            if s.pm_every_h and u.get("since_pm", 0.0) >= s.pm_every_h:
+                credit("pm", k, cur, cur + s.pm_hours)       # preventive maintenance before the next lot
+                cur += s.pm_hours
+                u["since_pm"] = 0.0
             if u["last"] is not None and u["last"] != b.product and s.changeover > 0:
                 credit("setup", k, cur, cur + s.changeover)
                 cur += s.changeover
@@ -486,7 +494,8 @@ def simulate_des(plant: Plant) -> Result:
             while True:
                 credit("busy", k, cur, cur + dur)
                 cur += dur
-                if s.breakdown_p and rng.random() < s.breakdown_p:
+                u["since_pm"] = u.get("since_pm", 0.0) + dur
+                if s.breakdown_p and rng.random() < min(1.0, s.breakdown_p * (1.0 + s.wear_per_100h * u["since_pm"] / 100.0)):
                     r = _gamma(rng, s.repair, 0.5)
                     credit("repair", k, cur, cur + r)
                     cur += r

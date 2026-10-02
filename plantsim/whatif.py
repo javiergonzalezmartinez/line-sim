@@ -93,7 +93,7 @@ def metrics(plant, res) -> Dict[str, float]:
     return {"Throughput (batches/week)": res.throughput_per_week, "Mean lead time (days)": res.mean_lead_time_days,
             "Rejected lots (window)": float(res.rejected), "Busiest stage utilisation": util,
             "Blocked resource-hours": sum(st.blocked for st in res.stats),
-            "Setup hours (all stages)": sum(st.setup for st in res.stats), "Longest queue wait (h)": max(st.max_queue_wait for st in res.stats)}
+            "Setup hours (all stages)": sum(st.setup for st in res.stats), "Repair hours (all stages)": sum(st.repair for st in res.stats), "Preventive maintenance hours": sum(st.pm for st in res.stats), "Longest queue wait (h)": max(st.max_queue_wait for st in res.stats)}
 
 
 def replicate(plant, n: int) -> List[Dict[str, float]]:
