@@ -23,10 +23,11 @@ Everything is **synthetic**: no real plant, company or personal data. Parameters
 | ![Material](docs/img/m10_material.png) **Material shortages** | ![Faults](docs/img/m22_faults.png) **Injected sensor faults and excursions** |
 | ![What-if](docs/img/m23_whatif.png) **What-if A vs B** with 95% confidence intervals | ![Replay export](docs/img/m24_mqtt.png) **Sparkplug-style messages** and OPC UA-style nodes |
 | ![Energy](docs/img/m25_energy.png) **Energy per stage** (placeholder kW) | ![Flow views](docs/img/m27_flow.png) **Heat map, material flow, Gantt** |
+| ![OEE](docs/img/m28_oee.png) **OEE decomposition** and loss waterfall | |
 
 ## Milestones
 
-M1-M6 line simulator, plant model, signal layer, finite buffers and blocking. M7 buffer size 0. M8 capacity on wait stages. M9 shifts and breaks. M10 material shortages. M11 canonical events and schema validator. M12 8 state machines. M13 machine signals. M14 KPIs. M15 interface handshakes and a seed scenario. M16 handling units and pallets. M17 forklift/AGV transport. M18 quality status. M19 live dashboard. M21 analog process values. M22 fault injection (drift, step, stochastic excursion, calibration overdue). M23 what-if comparator with confidence intervals. M24 Sparkplug-style MQTT replay and OPC UA-style node list. M25 energy calculator (placeholder kW). M27 heat map, material flow and Gantt views. Each one has tests and a section below.
+M1-M6 line simulator, plant model, signal layer, finite buffers and blocking. M7 buffer size 0. M8 capacity on wait stages. M9 shifts and breaks. M10 material shortages. M11 canonical events and schema validator. M12 8 state machines. M13 machine signals. M14 KPIs. M15 interface handshakes and a seed scenario. M16 handling units and pallets. M17 forklift/AGV transport. M18 quality status. M19 live dashboard. M21 analog process values. M22 fault injection (drift, step, stochastic excursion, calibration overdue). M23 what-if comparator with confidence intervals. M24 Sparkplug-style MQTT replay and OPC UA-style node list. M25 energy calculator (placeholder kW). M27 heat map, material flow and Gantt views. M28 OEE decomposition. Each one has tests and a section below.
 
 ## What is real, illustrative, or not modelled
 
@@ -202,3 +203,11 @@ Every kW value in `examples/energy_demo.json` is an illustrative placeholder, no
 Three views from the simulated batch traces (stage, arrive, start, end): a utilisation heat map (occupied share of each process stage per 7-day bucket), a Sankey-style material flow between process stages with the rejected branch, and a Gantt of the first finished lots (grey = waiting before a stage, colour = stage kind). The page is one HTML file with inline SVG.
 
 Limits: the heat map shows occupied time, which can include repair or setup inside a stage, not value-adding time. The flow diagram skips transport and wait stages and counts a lot at a stage if its trace reaches it; it is a drawn diagram with simple curves, not a layout-optimised Sankey. The Gantt axis is in simulated days, not calendar dates, and does not show shifts. Tests check heat values stay in 0-100%, occupied hours match the traces, lot counts are conserved along the flow, and each Gantt lot is sequential.
+
+## M28: OEE decomposition per stage (synthetic)
+
+`python -m plantsim.cli examples/pharma_flow.json --oee-view oee.html`
+
+Availability, performance and quality per process stage, their product, and a loss waterfall for the most loaded stage (planned time, no lot waiting, setup, repair, run time, speed loss, rejected lots). The three-factor structure is the one at oee.com/oee-factors (read 2 Oct 2026). The formulas are choices made in `plantsim/oee.py` and written at its top: availability is busy / (busy + setup + repair); performance is the nominal process time of the stage times the lots finished, divided by busy time; quality is one minus the rejected share, attributed to the last process stage a lot reached; OEE x loading puts it back on planned time.
+
+Read the numbers carefully: performance here only reflects the variability and repeated steps drawn by the simulation around the configured nominal time, so values near 100% do not say anything about a real line, and it can go above 100% (not clamped). Not modelled: minor stops, shift calendar removed from planned time, rework, per-product ideal times. Tests check A x P x Q = OEE, bounds, that time adds up to planned, that a plant without losses gives availability 1 and performance about 1, and that rejected lots add up to the simulation's count.
