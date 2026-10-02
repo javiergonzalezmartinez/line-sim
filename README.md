@@ -23,11 +23,11 @@ Everything is **synthetic**: no real plant, company or personal data. Parameters
 | ![Material](docs/img/m10_material.png) **Material shortages** | ![Faults](docs/img/m22_faults.png) **Injected sensor faults and excursions** |
 | ![What-if](docs/img/m23_whatif.png) **What-if A vs B** with 95% confidence intervals | ![Replay export](docs/img/m24_mqtt.png) **Sparkplug-style messages** and OPC UA-style nodes |
 | ![Energy](docs/img/m25_energy.png) **Energy per stage** (placeholder kW) | ![Flow views](docs/img/m27_flow.png) **Heat map, material flow, Gantt** |
-| ![OEE](docs/img/m28_oee.png) **OEE decomposition** and loss waterfall | |
+| ![OEE](docs/img/m28_oee.png) **OEE decomposition** and loss waterfall | ![Bottleneck](docs/img/m29_bottleneck.png) **Shifting bottleneck** (active period method) |
 
 ## Milestones
 
-M1-M6 line simulator, plant model, signal layer, finite buffers and blocking. M7 buffer size 0. M8 capacity on wait stages. M9 shifts and breaks. M10 material shortages. M11 canonical events and schema validator. M12 8 state machines. M13 machine signals. M14 KPIs. M15 interface handshakes and a seed scenario. M16 handling units and pallets. M17 forklift/AGV transport. M18 quality status. M19 live dashboard. M21 analog process values. M22 fault injection (drift, step, stochastic excursion, calibration overdue). M23 what-if comparator with confidence intervals. M24 Sparkplug-style MQTT replay and OPC UA-style node list. M25 energy calculator (placeholder kW). M27 heat map, material flow and Gantt views. M28 OEE decomposition. Each one has tests and a section below.
+M1-M6 line simulator, plant model, signal layer, finite buffers and blocking. M7 buffer size 0. M8 capacity on wait stages. M9 shifts and breaks. M10 material shortages. M11 canonical events and schema validator. M12 8 state machines. M13 machine signals. M14 KPIs. M15 interface handshakes and a seed scenario. M16 handling units and pallets. M17 forklift/AGV transport. M18 quality status. M19 live dashboard. M21 analog process values. M22 fault injection (drift, step, stochastic excursion, calibration overdue). M23 what-if comparator with confidence intervals. M24 Sparkplug-style MQTT replay and OPC UA-style node list. M25 energy calculator (placeholder kW). M27 heat map, material flow and Gantt views. M28 OEE decomposition. M29 shifting bottleneck detector. Each one has tests and a section below.
 
 ## What is real, illustrative, or not modelled
 
@@ -211,3 +211,11 @@ Limits: the heat map shows occupied time, which can include repair or setup insi
 Availability, performance and quality per process stage, their product, and a loss waterfall for the most loaded stage (planned time, no lot waiting, setup, repair, run time, speed loss, rejected lots). The three-factor structure is the one at oee.com/oee-factors (read 2 Oct 2026). The formulas are choices made in `plantsim/oee.py` and written at its top: availability is busy / (busy + setup + repair); performance is the nominal process time of the stage times the lots finished, divided by busy time; quality is one minus the rejected share, attributed to the last process stage a lot reached; OEE x loading puts it back on planned time.
 
 Read the numbers carefully: performance here only reflects the variability and repeated steps drawn by the simulation around the configured nominal time, so values near 100% do not say anything about a real line, and it can go above 100% (not clamped). Not modelled: minor stops, shift calendar removed from planned time, rework, per-product ideal times. Tests check A x P x Q = OEE, bounds, that time adds up to planned, that a plant without losses gives availability 1 and performance about 1, and that rejected lots add up to the simulation's count.
+
+## M29: shifting bottleneck detector (synthetic)
+
+`python -m plantsim.cli examples/whatif_a.json --bottleneck-view bottleneck.html`
+
+Applies the active period method of Roser, Nakano and Tanaka (Winter Simulation Conference 2002, preprint read 2 Oct 2026): the stage with the longest uninterrupted active period at a given moment is the momentary bottleneck. Sampled every hour in the window; a strip timeline shows who it was, a table gives the share of time and the number of shifts.
+
+Choices and limits, all in `plantsim/bottleneck.py`: a stage is active while any of its servers works (union of busy intervals), which makes multi-server stages look longer-active than a single machine, so a 3-server stage such as QC lab can dominate even though the utilisation heat map points at Coating; the two views answer different questions and should be read together. Setup time is not in the traces. Moments where the two longest periods differ by less than 5% are "unclear" and do not count as shifts. In the example (illustrative parameters) the bottleneck changes 152 times in 12 weeks, which says the line has several near-equal constraints, not that a real plant behaves this way. Not modelled: a real-time variant, tool changes, a significance test. Tests check disjoint periods, shares sum to 1, the margin effect, shift counting, and a one-machine line.
