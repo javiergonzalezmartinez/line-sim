@@ -29,6 +29,12 @@ class T(unittest.TestCase):
         r = sweep(p, [1, 30, 180], 24, 1 / 90.0, 12, 3, 1500)
         self.assertLess(r[0]["mean"][0], r[2]["mean"][0])
         self.assertIn("renewal", render_html(r, 24, 1 / 90.0, 12, 3))
+        # the table's formula is the phase-corrected one; the first form is kept only as a comparison column
+        for row in r:
+            P, M = closed_exact(24, 1 / 90.0 / 24, row["Tt"] * 24.0, 12); P0, M0 = closed(24, 1 / 90.0 / 24, row["Tt"] * 24.0, 12)
+            self.assertAlmostEqual(row["mean_th"], M, places=9); self.assertAlmostEqual(row["mean_old"], M0, places=9)
+        self.assertGreater(r[2]["mean_th"], r[2]["mean_old"] * 1.15)    # at 180 d the corrected form is well above the uniform-phase one
+        self.assertIn("phase-corrected", render_html(r, 24, 1 / 90.0, 12, 3))
     def test_bad(self):
         with self.assertRaises(ValueError): sweep(load("examples/pharma_flow.json"), [], 24, 0.1, 1)
 if __name__ == "__main__": unittest.main()
