@@ -24,6 +24,16 @@ class T(unittest.TestCase):
         self.assertGreater(abs(M1 - m) / m, 0.10)          # the uniform-phase form is clearly off here
         a, b = closed(24, 1e-6, 24.0, 12), closed_exact(24, 1e-6, 24.0, 12)
         self.assertAlmostEqual(a[1], b[1], delta=0.01 * a[1])   # equal when mu Tt is small
+    def test_phase_corrected_form_180d(self):
+        # at 180 days between tests (mu Tt about 2) the uniform-phase form is far off (735.6 h) and the corrected one (946.2 h) matches the simulation
+        mu, Tt = 0.0111 / 24, 180 * 24.0
+        ms = []
+        for sd in (21, 22, 23):
+            p, ls = _one(random.Random(sd), 24, mu, Tt, 12, 24 * 365 * 200, 40000); ms.append(sum(ls) / len(ls))
+        m = sum(ms) / len(ms)
+        P1, M1 = closed(24, mu, Tt, 12); P2, M2 = closed_exact(24, mu, Tt, 12)
+        self.assertLess(abs(M2 - m) / m, 0.06)
+        self.assertGreater(abs(M1 - m) / m, 0.15)
     def test_sweep(self):
         p = load("examples/pharma_flow.json")
         r = sweep(p, [1, 30, 180], 24, 1 / 90.0, 12, 3, 1500)
